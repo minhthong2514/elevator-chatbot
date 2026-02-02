@@ -1,12 +1,20 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from engine import ElevatorAI
+import uvicorn
 
 app = FastAPI()
-brain = ElevatorAI() # Khởi tạo model một lần duy nhất khi chạy server
+
+# Khởi tạo model AI
+print("Đang nạp Model Qwen vào RAM/GPU... Vui lòng đợi.")
+brain = ElevatorAI() 
 
 class QueryRequest(BaseModel):
     question: str
+
+@app.get("/")
+async def root():
+    return {"message": "Elevator AI Agent API is running!"}
 
 @app.post("/ask")
 async def ask_elevator(req: QueryRequest):
@@ -14,5 +22,5 @@ async def ask_elevator(req: QueryRequest):
     return {"status": "success", "answer": answer}
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("Khởi động Server tại cổng 8080...")
+    uvicorn.run(app, host="0.0.0.0", port=8080)
