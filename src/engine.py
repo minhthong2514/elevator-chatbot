@@ -1,11 +1,12 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer # SỬA: Dùng IteratorStreamer
 import json, re
 from pymongo import MongoClient
 import urllib.parse
 from datetime import datetime, timedelta
 import os
 import warnings
+from threading import Thread # THÊM: Để chạy stream song song
 
 # --- TẮT CẢNH BÁO ---
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
@@ -44,21 +45,21 @@ class ElevatorAI:
         inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
         
         if stream:
-            # Dùng TextStreamer để in trực tiếp
-            streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
-            
-            # Thay output_ids bằng _ vì chúng ta không cần giữ giá trị trả về
-            _ = self.model.generate(
+            # SỬA: Dùng TextIteratorStreamer để đẩy dữ liệu ra Web thay vì in tại chỗ
+            streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
+            generation_kwargs = dict(
                 **inputs, 
-                max_new_tokens=512, 
-                do_sample=True,
-                temperature=0.2,
-                top_p=0.9,
-                streamer=streamer
+                streamer=streamer, 
+                max_new_tokens=1024, # Tăng lên để báo cáo không bị cụt
+                do_sample=True, 
+                temperature=0.2, 
+                top_p=0.9
             )
-            return "" # Streamer đã in rồi nên trả về rỗng
+            thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+            thread.start()
+            return streamer 
         else:
-            # Chế độ bình thường (không stream)
+            # Chế độ bình thường (không stream) - GIỮ NGUYÊN
             output_ids = self.model.generate(
                 **inputs, 
                 max_new_tokens=1024, 
@@ -68,7 +69,7 @@ class ElevatorAI:
             )
             return self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].split("assistant")[-1].strip()
     
-    # Sử dụng một mẫu có sẵn để  AI hiểu ngữ cảnh và quy tắc tạo ra câu truy vấn tới mongoDB
+    # --- GIỮ NGUYÊN 100% LOGIC CŨ ---
     def _generate_query(self, user_question):
         now = datetime.now()
         today_date = now.strftime("%Y-%m-%d")
@@ -98,18 +99,14 @@ class ElevatorAI:
         print(f"--- AI RAW RESPONSE: {raw_res} ---")
 
         try:
-            # Làm sạch Markdown triệt để
             clean_res = re.sub(r'```json|```', '', raw_res).strip()
             clean_res = re.sub(r'ISODate\("([^"]+)"\)', r'"\1"', clean_res)
-            # Tìm khối { ... }
             match = re.search(r'\{.*\}', clean_res, re.DOTALL)
             if match:
                 json_str = match.group(0).replace("'", '"')
                 result = json.loads(json_str)
-                # Ép kiểu result phải là dict
                 return result if isinstance(result, dict) else {"error": "invalid_format"}
             
-            # Nếu AI trả về text "out_of_scope" mà không có ngoặc nhọn
             if "out_of_scope" in clean_res.lower():
                 return {"error": "out_of_scope"}
                 
@@ -131,7 +128,6 @@ class ElevatorAI:
         system_prompt = (
             "BẠN LÀ TRỢ LÝ GIÁM SÁT AN NINH THANG MÁY - NGHIÊM TÚC VÀ CHÍNH XÁC.\n"
             "NHIỆM VỤ: Lập báo cáo dựa trên dữ liệu camera. Tuyệt đối không được mâu thuẫn với dữ liệu.\n"
-            # Thêm dòng ràng buộc thời gian ngay tại đây
             f"LƯU Ý THỜI GIAN: Hôm nay là ngày {formatted_date}. Tuyệt đối KHÔNG dùng các năm cũ (2023, 2024).\n"
             f"LOGIC BẮT BUỘC:\n"
             f"1. Nếu trạng thái hệ thống là '{status_label}', bạn KHÔNG ĐƯỢC PHÉP viết là 'bình thường'.\n"
@@ -144,7 +140,6 @@ class ElevatorAI:
             f"HÃY LẬP BÁO CÁO CHO SỰ CỐ SAU (YÊU CẦU TRUNG THỰC VỚI DỮ LIỆU):\n"
             f"- TRẠNG THÁI XÁC ĐỊNH: {status_label}\n"
             f"- DỮ LIỆU CHI TIẾT: \n{context_data}\n"
-            # Ghi rõ nhãn để AI bốc dữ liệu cho chuẩn
             f"- NGÀY GHI NHẬN: {formatted_date}\n"
             f"- KHUNG GIỜ TRUY XUẤT: {start_t} - {end_t}\n\n"
             "HÃY VIẾT BÁO CÁO THEO CẤU TRÚC 4 MỤC:\n"
@@ -158,33 +153,35 @@ class ElevatorAI:
         return self._call_ai(messages, stream=stream)
 
     def ask(self, user_question, stream=False):
-        # 1. Lấy Query từ AI
+        # 1. Lấy Query từ AI - GIỮ NGUYÊN
         query_dict = self._generate_query(user_question)
 
-        # CHỐT CHẶN AN TOÀN
+        # CHỐT CHẶN AN TOÀN - GIỮ NGUYÊN
         if not isinstance(query_dict, dict):
             if isinstance(query_dict, str) and "out_of_scope" in query_dict:
                 query_dict = {"error": "out_of_scope"}
             else:
                 query_dict = {"error": "unknown_type"}
 
-        # 2. Xử lý trường hợp câu hỏi ngoài phạm vi
+        # Xử lý trường hợp lỗi khi gọi Stream
+        def error_generator(msg):
+            yield msg
+
+        # 2. Xử lý trường hợp câu hỏi ngoài phạm vi - GIỮ NGUYÊN
         if query_dict.get("error") == "out_of_scope":
-            return ("Tôi là trợ lý AI giám sát camera thang máy. Tôi chỉ có thể trả lời các câu hỏi về: "
+            res = ("Tôi là trợ lý AI giám sát camera thang máy. Tôi chỉ có thể trả lời các câu hỏi về: "
                     "\n- Tình hình an ninh/sự cố."
                     "\n- Các hành vi bất thường (nằm, ngồi, ngã)."
                     "\n- Kiểm tra dữ liệu theo ngày/giờ cụ thể."
                     "\n\nVui lòng đặt câu hỏi liên quan đến các mục trên.")
+            return error_generator(res) if stream else res
         
         if "timestamp" not in query_dict:
-            return "Câu hỏi của bạn không chứa mốc thời gian cụ thể hoặc không đủ dữ liệu để truy xuất."
+            res = "Câu hỏi của bạn không chứa mốc thời gian cụ thể hoặc không đủ dữ liệu để truy xuất."
+            return error_generator(res) if stream else res
         
         translate_behavior = {
-            "sitting": "đang ngồi",
-            "standing": "đang đứng",
-            "lying": "đang nằm trên sàn",
-            "fallen": "bị ngã",
-            "unknown": "không xác định"
+            "sitting": "đang ngồi", "standing": "đang đứng", "lying": "đang nằm trên sàn", "fallen": "bị ngã", "unknown": "không xác định"
         }
 
         try:
@@ -192,28 +189,24 @@ class ElevatorAI:
             data_found = list(cursor)
             
             if not data_found:
-                # Lấy ngày từ chuỗi để thông báo
                 gte_str = query_dict.get('timestamp', {}).get('$gte', 'N/A')
                 date_display = gte_str.split('T')[0] if 'T' in gte_str else gte_str
-                return f"Hệ thống không tìm thấy dữ liệu camera trong ngày {date_display}."
+                res = f"Hệ thống không tìm thấy dữ liệu camera trong ngày {date_display}."
+                return error_generator(res) if stream else res
 
-            # 5. Xử lý logic (Vì d['timestamp'] lúc này chắc chắn là String)
-            first_ts_str = data_found[0]['timestamp'] # "2026-02-03T16:13:53"
+            # GIỮ NGUYÊN TOÀN BỘ LOGIC XỬ LÝ DATA PHÍA DƯỚI
+            first_ts_str = data_found[0]['timestamp'] 
             record_date = first_ts_str.split('T')[0]
-            
             warns_info = {} 
 
             for d in data_found:
-                # Lấy HH:MM:SS từ chuỗi "2026-02-03T16:13:53"
                 full_ts = d['timestamp']
-                ts_short = full_ts.split('T')[-1] # Lấy "16:13:53"
-                
+                ts_short = full_ts.split('T')[-1] 
                 people = d.get("people", [])
                 for p in people:
                     p_id = p.get("person_id")
                     behavior = p.get("behavior", "unknown")
                     level = p.get("level", "normal")
-
                     if p_id not in warns_info:
                         warns_info[p_id] = {
                             "first_seen": ts_short,
@@ -229,34 +222,26 @@ class ElevatorAI:
                             if warns_info[p_id]["warning_start"] is None:
                                 warns_info[p_id]["warning_start"] = ts_short
 
-            # 6. Tạo chuỗi chi tiết
             actual_details = []
             for p_id in sorted(warns_info.keys()):
                 info = warns_info[p_id]
                 vi_behavior = translate_behavior.get(info['behavior'], info['behavior'])
-                
                 if info['warning_start'] == info['first_seen'] or info['warning_start'] is None:
                     detail = f"Người {p_id:02d} ({vi_behavior}): Ghi nhận từ {info['first_seen']} đến {info['last_seen']}."
                 else:
                     detail = f"Người {p_id:02d} ({vi_behavior}): Xuất hiện từ {info['first_seen']}, chính thức xác định bất thường từ {info['warning_start']} đến {info['last_seen']}."
                 actual_details.append(detail)
 
-            # 7. Đóng gói tóm tắt
             summary = {
                 "date": record_date,
-                "time_range": {
-                    "start": first_ts_str.split('T')[-1],
-                    "end": data_found[-1]['timestamp'].split('T')[-1]
-                },
+                "time_range": {"start": first_ts_str.split('T')[-1], "end": data_found[-1]['timestamp'].split('T')[-1]},
                 "details": actual_details,
                 "is_emergency": any(item['is_warning'] for item in warns_info.values())
             }
 
         except Exception as e:
-            print(f"Lỗi hệ thống trong hàm ask: {e}")
-            import traceback
-            traceback.print_exc() # In chi tiết lỗi để debug
-            return "Đã xảy ra lỗi trong quá trình truy xuất dữ liệu an ninh. Vui lòng thử lại sau."
+            res = "Đã xảy ra lỗi trong quá trình truy xuất dữ liệu an ninh."
+            return error_generator(res) if stream else res
         
         print(f"[Debug] Dữ liệu gửi cho AI phản hồi: {summary}")
         return self._humanize_response(user_question, summary, stream=stream)
