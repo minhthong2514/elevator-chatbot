@@ -17,7 +17,7 @@ class ElevatorAI:
         print(f"--- Đang khởi động AI trên thiết bị: {device.upper()} ---")
 
         # 1. Khởi tạo Model
-        self.model_path = r"D:\University\Nam_tu\TTTN\models"
+        self.model_path = "/media/minhthong/DATA/University/Nam_tu/TTTN/models"
         
         print("Đang load model từ ổ cứng...")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
@@ -61,29 +61,28 @@ class ElevatorAI:
             # Chế độ bình thường (không stream)
             output_ids = self.model.generate(
                 **inputs, 
-                max_new_tokens=512, 
+                max_new_tokens=1024, 
                 do_sample=True, 
                 temperature=0.2,
                 top_p=0.9
             )
             return self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].split("assistant")[-1].strip()
-        
+    
+    # Sử dụng một mẫu có sẵn để  AI hiểu ngữ cảnh và quy tắc tạo ra câu truy vấn tới mongoDB
     def _generate_query(self, user_question):
         now = datetime.now()
         today_date = now.strftime("%Y-%m-%d")
         now_full = now.strftime("%Y-%m-%dT%H:%M:%S")
 
         system_prompt = (
-            f"BẠN LÀ CHUYÊN VIÊN TRÍCH XUẤT DỮ LIỆU CAMERA. GIỜ: {now_full}.\n"
+            f"BẠN LÀ CHUYÊN VIÊN TRÍCH XUẤT DỮ LIỆU CAMERA. GIỜ HỆ THỐNG: {now_full}.\n"
             f"NGÀY HÔM NAY: {today_date}.\n"
-            "NHIỆM VỤ: Xác định câu hỏi có thuộc phạm vi camera thang máy hay không và tạo JSON.\n\n"
-            "DANH SÁCH CÂU HỎI HỢP LỆ (LUÔN TẠO JSON):\n"
-            "- Hỏi về tình hình an ninh, báo cáo, sự cố, CẢNH BÁO (warning/alert).\n"
-            "- Hỏi về số lượng (có bao nhiêu người, bao nhiêu vụ, bao nhiêu cảnh báo).\n"
-            "- Hỏi về hành vi: nằm, ngồi, đứng, ngã, di chuyển trong thang máy.\n"
-            "- Các câu hỏi chứa ngày tháng cụ thể.\n\n"
-            "DANH SÁCH CÂU HỎI NGOÀI LỀ (TRẢ VỀ error: out_of_scope):\n"
-            "- Chào hỏi, thời tiết, kiến thức phổ thông, toán học, hỏi thăm cá nhân, nấu ăn.\n\n"
+            "NHIỆM VỤ: Xác định câu hỏi và tạo JSON truy vấn MongoDB.\n\n"
+            "QUY TẮC XỬ LÝ NGÀY THÁNG (QUAN TRỌNG):\n"
+            "1. Người dùng Việt Nam dùng định dạng: NGÀY/THÁNG. Ví dụ '3/2' nghĩa là ngày 03 tháng 02.\n"
+            f"2. Nếu người dùng không nói năm, hãy mặc định dùng năm hiện tại là {now.year}.\n"
+            "3. LUÔN TRẢ VỀ định dạng chuỗi ISO (KHÔNG CÓ chữ Z ở cuối): 'YYYY-MM-DDTHH:mm:ss'.\n"
+            "   - Ví dụ '3/2' -> $gte: '2026-02-03T00:00:00', $lt: '2026-02-04T00:00:00'.\n"
             "QUY TẮC TRÍCH XUẤT:\n"
             "1. Nếu câu hỏi HỢP LỆ: Trả về JSON {\"camera_id\": \"CAM_01\", \"timestamp\": {\"$gte\": \"...\", \"$lt\": \"...\"}}\n"
             "2. Nếu câu hỏi NGOÀI LỀ: Trả về JSON {\"error\": \"out_of_scope\"}\n"
@@ -121,7 +120,6 @@ class ElevatorAI:
         
     def _humanize_response(self, user_question, summary, stream=False):
         raw_date = summary.get('date', 'N/A')
-        # Ép định dạng ngày để AI không tự ý lấy năm 2023
         formatted_date = "/".join(raw_date.split("-")[::-1])
         start_t = summary['time_range']['start']
         end_t = summary['time_range']['end']
@@ -163,9 +161,8 @@ class ElevatorAI:
         # 1. Lấy Query từ AI
         query_dict = self._generate_query(user_question)
 
-        # CHỐT CHẶN AN TOÀN: Đảm bảo query_dict luôn là Dictionary
+        # CHỐT CHẶN AN TOÀN
         if not isinstance(query_dict, dict):
-            # Nếu lỡ là chuỗi chứa out_of_scope thì xử lý luôn
             if isinstance(query_dict, str) and "out_of_scope" in query_dict:
                 query_dict = {"error": "out_of_scope"}
             else:
@@ -179,11 +176,9 @@ class ElevatorAI:
                     "\n- Kiểm tra dữ liệu theo ngày/giờ cụ thể."
                     "\n\nVui lòng đặt câu hỏi liên quan đến các mục trên.")
         
-        # Nếu không có query hợp lệ để tìm DB
         if "timestamp" not in query_dict:
             return "Câu hỏi của bạn không chứa mốc thời gian cụ thể hoặc không đủ dữ liệu để truy xuất."
         
-        # --- TIẾP TỤC LOGIC TRUY VẤN DB CỦA BẠN ---
         translate_behavior = {
             "sitting": "đang ngồi",
             "standing": "đang đứng",
@@ -197,16 +192,23 @@ class ElevatorAI:
             data_found = list(cursor)
             
             if not data_found:
-                return f"Hệ thống không tìm thấy dữ liệu camera trong khoảng thời gian được yêu cầu vào ngày {query_dict.get('timestamp', {}).get('$gte', '').split('T')[0]}."
+                # Lấy ngày từ chuỗi để thông báo
+                gte_str = query_dict.get('timestamp', {}).get('$gte', 'N/A')
+                date_display = gte_str.split('T')[0] if 'T' in gte_str else gte_str
+                return f"Hệ thống không tìm thấy dữ liệu camera trong ngày {date_display}."
 
-            # 5. Xử lý logic gom nhóm dữ liệu (Người 01, Người 02...)
-            record_date = str(data_found[0]['timestamp']).split('T')[0]
+            # 5. Xử lý logic (Vì d['timestamp'] lúc này chắc chắn là String)
+            first_ts_str = data_found[0]['timestamp'] # "2026-02-03T16:13:53"
+            record_date = first_ts_str.split('T')[0]
+            
             warns_info = {} 
 
             for d in data_found:
-                ts_short = str(d['timestamp']).split('T')[-1].split('.')[0]
-                people = d.get("people", [])
+                # Lấy HH:MM:SS từ chuỗi "2026-02-03T16:13:53"
+                full_ts = d['timestamp']
+                ts_short = full_ts.split('T')[-1] # Lấy "16:13:53"
                 
+                people = d.get("people", [])
                 for p in people:
                     p_id = p.get("person_id")
                     behavior = p.get("behavior", "unknown")
@@ -227,27 +229,24 @@ class ElevatorAI:
                             if warns_info[p_id]["warning_start"] is None:
                                 warns_info[p_id]["warning_start"] = ts_short
 
-            # 6. Tạo chuỗi chi tiết cho từng đối tượng để gửi cho AI Humanize
+            # 6. Tạo chuỗi chi tiết
             actual_details = []
             for p_id in sorted(warns_info.keys()):
                 info = warns_info[p_id]
                 vi_behavior = translate_behavior.get(info['behavior'], info['behavior'])
                 
                 if info['warning_start'] == info['first_seen'] or info['warning_start'] is None:
-                    # Trường hợp bất thường ngay từ đầu hoặc không có cảnh báo
                     detail = f"Người {p_id:02d} ({vi_behavior}): Ghi nhận từ {info['first_seen']} đến {info['last_seen']}."
                 else:
-                    # Trường hợp ngồi/nằm một lúc sau mới tính là bất thường (quy tắc 5s)
                     detail = f"Người {p_id:02d} ({vi_behavior}): Xuất hiện từ {info['first_seen']}, chính thức xác định bất thường từ {info['warning_start']} đến {info['last_seen']}."
-                
                 actual_details.append(detail)
 
-            # 7. Đóng gói tóm tắt (Summary)
+            # 7. Đóng gói tóm tắt
             summary = {
                 "date": record_date,
                 "time_range": {
-                    "start": str(data_found[0]['timestamp']).split('T')[-1].split('.')[0],
-                    "end": str(data_found[-1]['timestamp']).split('T')[-1].split('.')[0]
+                    "start": first_ts_str.split('T')[-1],
+                    "end": data_found[-1]['timestamp'].split('T')[-1]
                 },
                 "details": actual_details,
                 "is_emergency": any(item['is_warning'] for item in warns_info.values())
@@ -255,8 +254,9 @@ class ElevatorAI:
 
         except Exception as e:
             print(f"Lỗi hệ thống trong hàm ask: {e}")
+            import traceback
+            traceback.print_exc() # In chi tiết lỗi để debug
             return "Đã xảy ra lỗi trong quá trình truy xuất dữ liệu an ninh. Vui lòng thử lại sau."
         
         print(f"[Debug] Dữ liệu gửi cho AI phản hồi: {summary}")
-        print("\nAI Agent: \n", end="", flush=True) 
         return self._humanize_response(user_question, summary, stream=stream)
