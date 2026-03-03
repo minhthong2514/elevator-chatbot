@@ -123,35 +123,36 @@ class ElevatorAI:
         context_data = "\n".join(summary['details'])
         
         is_urgent = summary.get('is_emergency', False)
-        status_label = "CẢNH BÁO NGUY HIỂM / BẤT THƯỜNG" if is_urgent else "BÌNH THƯỜNG"
+        status_label = "CẢNH BÁO NGUY HIỂM - XUẤT HIỆN HÀNH VI BẤT THƯỜNG" if is_urgent else "BÌNH THƯỜNG"
 
         system_prompt = (
-            "BẠN LÀ TRỢ LÝ GIÁM SÁT AN NINH THANG MÁY - NGHIÊM TÚC VÀ CHÍNH XÁC.\n"
-            "NHIỆM VỤ: Lập báo cáo dựa trên dữ liệu camera. Tuyệt đối không được mâu thuẫn với dữ liệu.\n"
-            f"LƯU Ý THỜI GIAN: Hôm nay là ngày {formatted_date}. Tuyệt đối KHÔNG dùng các năm cũ (2023, 2024).\n"
-            f"LOGIC BẮT BUỘC:\n"
-            f"1. Nếu trạng thái hệ thống là '{status_label}', bạn KHÔNG ĐƯỢC PHÉP viết là 'bình thường'.\n"
-            "2. Mục 4 (Kiểm tra khẩn cấp) KHÔNG ĐƯỢC nói 'không có hành vi bất thường' nếu ở mục 3 đã liệt kê sự cố.\n"
-            "3. Loại bỏ hoàn toàn các phần 'THAM KHẢO' hay 'KHÓA TIẾP THEO' rườm rà. Chỉ tập trung vào 4 mục chính.\n"
-            "4. Ngôn ngữ phải quyết liệt, yêu cầu con người can thiệp khi có sự cố."
+            "BẠN LÀ TRỢ LÝ GIÁM SÁT AN NINH THANG MÁY - NGÔN NGỮ TRỰC TIẾP, ĐANH THÉP.\n"
+            "NHIỆM VỤ: Lập báo cáo từ dữ liệu camera. Tuyệt đối không mâu thuẫn dữ liệu.\n"
+            "QUY TẮC CẤM:\n"
+            "1. CẤM viết lại các câu hướng dẫn, câu ví dụ hay nội dung trong ngoặc đơn.\n"
+            "2. CẤM các từ ngữ lịch sự thừa thãi như: 'Xin vui lòng', 'Cần được', 'Hãy', 'Trân trọng', 'Cảm ơn'.\n"
+            "3. CẤM liệt kê danh sách xuống dòng ở mục YÊU CẦU HÀNH ĐỘNG.\n"
+            f"LƯU Ý THỜI GIAN: Hôm nay là {formatted_date}.\n"
+            "QUY TẮC VIẾT:\n"
+            "- [TRẠNG THÁI AN NINH]: Viết giá trị trạng thái ngay sau dấu hai chấm.\n"
+            "- [CHI TIẾT SỰ KIỆN]: Liệt kê mỗi người một dòng: ghi rõ hành vi, mốc thời gian và chốt trạng thái (BÌNH THƯỜNG hoặc NGUY HIỂM).\n"
+            "- [YÊU CẦU HÀNH ĐỘNG]: Phải liệt kê TẤT CẢ các mã số người có hành vi 'nằm trên sàn' hoặc 'xác định bất thường' vào chung một đoạn văn ngắn gọn duy nhất yêu cầu nguời quản lý phải kiểm tra gấp."        
         )
 
         user_content = (
-            f"HÃY LẬP BÁO CÁO CHO SỰ CỐ SAU (YÊU CẦU TRUNG THỰC VỚI DỮ LIỆU):\n"
-            f"- TRẠNG THÁI XÁC ĐỊNH: {status_label}\n"
-            f"- DỮ LIỆU CHI TIẾT: \n{context_data}\n"
-            f"- NGÀY GHI NHẬN: {formatted_date}\n"
-            f"- KHUNG GIỜ TRUY XUẤT: {start_t} - {end_t}\n\n"
-            "HÃY VIẾT BÁO CÁO THEO CẤU TRÚC 4 MỤC:\n"
-            "1. [Trạng thái an ninh]: Phải ghi rõ là CẢNH BÁO NGUY HIỂM nếu có sự cố.\n"
-            f"2. [Mốc thời gian]: Ghi chính xác Ngày {formatted_date} và khung giờ {start_t} - {end_t}.\n"
-            "3. [Cụ thể sự cố/thông tin]: Diễn giải chi tiết hành vi của từng người dựa trên dữ liệu chi tiết.\n"
-            "4. [Kiểm tra khẩn cấp]: Phải yêu cầu nhân viên an ninh đến hiện trường ngay lập tức."
+            f"DỮ LIỆU GỐC (CẤM IN LẠI):\n- Trạng thái: {status_label}\n- Chi tiết: {context_data}\n\n"
+            f"HÃY XUẤT BÁO CÁO THEO CẤU TRÚC CHÍNH XÁC NHƯ SAU:\n\n"
+            f"DỮ LIỆU ĐƯỢC TRUY XUẤT VÀO NGÀY {formatted_date}, BẮT ĐẦU TỪ {start_t} TỚI {end_t}.\n\n"
+            f"[TRẠNG THÁI AN NINH]: {status_label}\n\n"
+            f"[THÔNG TIN CHI TIẾT]\n"
+            f"{{Điền danh sách chi tiết các cá nhân ở đây}}\n\n"
+            f"[YÊU CẦU HÀNH ĐỘNG]\n\n"
+            # f"YÊU CẦU CAN THIỆP KHẨN CẤP NGAY ĐỐI VỚI: "
         )
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_content}]
         return self._call_ai(messages, stream=stream)
-
+    
     def ask(self, user_question, stream=False):
         # 1. Lấy Query từ AI - GIỮ NGUYÊN
         query_dict = self._generate_query(user_question)
