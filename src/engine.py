@@ -69,51 +69,79 @@ class ElevatorAI:
             )
             return self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].split("assistant")[-1].strip()
     
-    # --- GIỮ NGUYÊN 100% LOGIC CŨ ---
     def _generate_query(self, user_question):
         now = datetime.now()
+        current_year = now.year
+
+        processed_question = user_question
+        date_pattern = r'(\d{1,2})[/-](\d{1,2})(?!\d|/|-)'
+        if re.search(date_pattern, user_question):
+            # Nếu tìm thấy ngày/tháng mà không có năm đi kèm, ta nối thêm năm hiện tại
+            processed_question = re.sub(date_pattern, rf'\1/\2/{current_year}', user_question)
+
         today_date = now.strftime("%Y-%m-%d")
+        yesterday_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
         now_full = now.strftime("%Y-%m-%dT%H:%M:%S")
+        day_of_week = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"][now.weekday()]
 
         system_prompt = (
-            f"BẠN LÀ CHUYÊN VIÊN TRÍCH XUẤT DỮ LIỆU CAMERA. GIỜ HỆ THỐNG: {now_full}.\n"
-            f"NGÀY HÔM NAY: {today_date}.\n"
-            "NHIỆM VỤ: Xác định câu hỏi và tạo JSON truy vấn MongoDB.\n\n"
-            "QUY TẮC XỬ LÝ NGÀY THÁNG (QUAN TRỌNG):\n"
-            "1. Người dùng Việt Nam dùng định dạng: NGÀY/THÁNG. Ví dụ '3/2' nghĩa là ngày 03 tháng 02.\n"
-            f"2. Nếu người dùng không nói năm, hãy mặc định dùng năm hiện tại là {now.year}.\n"
-            "3. LUÔN TRẢ VỀ định dạng chuỗi ISO (KHÔNG CÓ chữ Z ở cuối): 'YYYY-MM-DDTHH:mm:ss'.\n"
-            "   - Ví dụ '3/2' -> $gte: '2026-02-03T00:00:00', $lt: '2026-02-04T00:00:00'.\n"
-            "QUY TẮC TRÍCH XUẤT:\n"
-            "1. Nếu câu hỏi HỢP LỆ: Trả về JSON {\"camera_id\": \"CAM_01\", \"timestamp\": {\"$gte\": \"...\", \"$lt\": \"...\"}}\n"
-            "2. Nếu câu hỏi NGOÀI LỀ: Trả về JSON {\"error\": \"out_of_scope\"}\n"
-            "3. CHỈ TRẢ VỀ JSON, không giải thích."
+            f"BẠN LÀ CHUYÊN VIÊN TRÍCH XUẤT DỮ LIỆU CAMERA TRONG THANG MÁY.\n"
+            f"GIỜ HỆ THỐNG: {now_full}.\n"
+            f"THÔNG TIN LỊCH: Hôm nay là {day_of_week}, ngày {today_date}. Ngày hôm qua là {yesterday_date}.\n\n"
+
+            "QUY TẮC PHÂN LOẠI (BẮT BUỘC TUÂN THỦ):\n"
+            "1. CHỈ tạo JSON khi câu hỏi chứa từ khóa chuyên môn: camera, an ninh, sự cố, thang máy, kiểm tra người (ngã, nằm, ngồi, đột nhập), báo cáo.\n"
+            "2. MỌI CÂU HỎI KHÁC (Chào hỏi, thời tiết, tán gẫu, hỏi đáp kiến thức...): CẤM phân tích thời gian, CẤM tạo JSON truy vấn. PHẢI TRẢ VỀ DUY NHẤT: {\"error\": \"out_of_scope\"}.\n"
+            "3. CẤM tự chế thêm trường (key) như 'query', 'topic', 'message'. Chỉ được phép trả về 'camera_id' và 'timestamp'.\n\n"
+
+            "VÍ DỤ NGOÀI LỀ (PHẢI TRẢ VỀ OUT_OF_SCOPE):\n"
+            "- 'xin chào', 'hello', 'hi' -> {\"error\": \"out_of_scope\"}\n"
+            "- 'thời tiết hôm nay', 'bạn là ai', 'ăn cơm chưa' -> {\"error\": \"out_of_scope\"}\n"
+            "- 'thời tiết ngày 3/3 thế nào' -> {\"error\": \"out_of_scope\"}\n\n"
+
+            "VÍ DỤ TRUY VẤN HỢP LỆ (TRẢ VỀ JSON):\n"
+            f"- 'tình hình thang máy ngày 3/3' -> {{\"camera_id\": \"CAM_01\", \"timestamp\": {{\" $gte\": \"{current_year}-03-03T00:00:00\", \"$lt\": \"{current_year}-03-03T23:59:59\"}}}}\n"
+            f"- 'an ninh hôm qua thế nào' -> {{\"camera_id\": \"CAM_01\", \"timestamp\": {{\" $gte\": \"{yesterday_date}T00:00:00\", \"$lt\": \"{yesterday_date}T23:59:59\"}}}}\n\n"
+
+            "YÊU CẦU ĐỊNH DẠNG:\n"
+            "1. CAMERA ID: Luôn là \"CAM_01\".\n"
+            f"2. NĂM MẶC ĐỊNH: Luôn dùng {current_year}.\n"
+            "3. CHỈ TRẢ VỀ JSON THUẦN TÚY, KHÔNG DÙNG DẤU NHÁY ``` CŨNG KHÔNG GIẢI THÍCH."
         )
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Chuyển câu sau sang JSON: {user_question}"}
+            {"role": "user", "content": f"Chuyển câu sau sang JSON: {processed_question}"}
         ]
         
         raw_res = self._call_ai(messages)
         print(f"--- AI RAW RESPONSE: {raw_res} ---")
 
         try:
+            # Làm sạch phản hồi từ AI
             clean_res = re.sub(r'```json|```', '', raw_res).strip()
-            clean_res = re.sub(r'ISODate\("([^"]+)"\)', r'"\1"', clean_res)
             match = re.search(r'\{.*\}', clean_res, re.DOTALL)
+            
             if match:
                 json_str = match.group(0).replace("'", '"')
                 result = json.loads(json_str)
-                return result if isinstance(result, dict) else {"error": "invalid_format"}
-            
-            if "out_of_scope" in clean_res.lower():
-                return {"error": "out_of_scope"}
                 
-            return {"error": "no_json_found"}
+                # --- LỚP BẢO VỆ: CHỈ GIỮ LẠI CÁC TRƯỜNG HỢP LỆ CHO MONGODB ---
+                if "camera_id" in result and "timestamp" in result:
+                    return {
+                        "camera_id": "CAM_01", # Ép cứng ID tại đây cho an toàn tuyệt đối
+                        "timestamp": result["timestamp"]
+                    }
+                
+                # Trường hợp AI trả về out_of_scope dạng JSON
+                if result.get("error") == "out_of_scope":
+                    return {"error": "out_of_scope"}
+            
+            return {"error": "out_of_scope"}
+            
         except Exception as e:
             print(f"Lỗi phân tách JSON: {e}")
-            return {"error": "parse_exception"}
+            return {"error": "out_of_scope"}
         
     def _humanize_response(self, user_question, summary, stream=False):
         raw_date = summary.get('date', 'N/A')
@@ -168,17 +196,29 @@ class ElevatorAI:
         def error_generator(msg):
             yield msg
 
-        # 2. Xử lý trường hợp câu hỏi ngoài phạm vi - GIỮ NGUYÊN
-        if query_dict.get("error") == "out_of_scope":
-            res = ("Tôi là trợ lý AI giám sát camera thang máy. Tôi chỉ có thể trả lời các câu hỏi về: "
-                    "\n- Tình hình an ninh/sự cố."
-                    "\n- Các hành vi bất thường (nằm, ngồi, ngã)."
-                    "\n- Kiểm tra dữ liệu theo ngày/giờ cụ thể."
-                    "\n\nVui lòng đặt câu hỏi liên quan đến các mục trên.")
+        # 2. Xử lý trường hợp câu hỏi ngoài phạm vi 
+        if query_dict.get("error") == "out_of_scope" or "message" in query_dict or "query" in query_dict:
+            q_lower = user_question.lower()
+            greetings = ["chào", "hi", "hello", "xin chào", "hey"]
+            
+            # 1. Kiểm tra nếu là lời chào
+            if any(word in q_lower for word in greetings):
+                res = ("Xin chào! Tôi là trợ lý AI giám sát an ninh thang máy.\n"
+                       "Tôi đã sẵn sàng hỗ trợ. Bạn cần tôi trích xuất dữ liệu camera hay kiểm tra sự cố vào mốc thời gian nào?")
+            
+            # 2. Nếu không phải chào hỏi (ví dụ hỏi thời tiết, linh tinh) thì mới hiện danh sách quy định
+            else:
+                res = ("Tôi là trợ lý AI giám sát camera thang máy. Hiện tại tôi không có dữ liệu về các vấn đề ngoài lề .\n"
+                       "Tôi chỉ chuyên trách các mục sau:\n"
+                       "- Tình hình an ninh/sự cố.\n"
+                       "- Các hành vi bất thường (nằm, ngồi, ngã).\n"
+                       "- Truy xuất dữ liệu theo ngày/giờ cụ thể.\n\n"
+                       "Vui lòng đặt câu hỏi liên quan đến an ninh thang máy.")
+            
             return error_generator(res) if stream else res
         
         if "timestamp" not in query_dict:
-            res = "Câu hỏi của bạn không chứa mốc thời gian cụ thể hoặc không đủ dữ liệu để truy xuất."
+            res = "Tôi không xác định được mốc thời gian bạn cần. Vui lòng nói rõ hơn (ví dụ: sáng nay, hôm qua)."
             return error_generator(res) if stream else res
         
         translate_behavior = {
@@ -186,16 +226,48 @@ class ElevatorAI:
         }
 
         try:
+            # 1. Truy vấn theo khung giờ cụ thể người dùng yêu cầu
             cursor = self.collection.find(query_dict).sort("timestamp", 1)
             data_found = list(cursor)
             
             if not data_found:
-                gte_str = query_dict.get('timestamp', {}).get('$gte', 'N/A')
-                date_display = gte_str.split('T')[0] if 'T' in gte_str else gte_str
-                res = f"Hệ thống không tìm thấy dữ liệu camera trong ngày {date_display}."
-                return error_generator(res) if stream else res
+                # Trích xuất thông tin thời gian từ query để xử lý thông báo
+                gte_str = query_dict.get('timestamp', {}).get('$gte', '')
+                lt_str = query_dict.get('timestamp', {}).get('$lt', '')
+                
+                date_raw = gte_str.split('T')[0] if 'T' in gte_str else gte_str
+                
+                # Đảo định dạng ngày sang DD-MM-YYYY để hiển thị
+                try:
+                    parts = date_raw.split("-")
+                    date_display = f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else date_raw
+                except:
+                    date_display = date_raw
 
-            # GIỮ NGUYÊN TOÀN BỘ LOGIC XỬ LÝ DATA PHÍA DƯỚI
+                # --- BỔ SUNG: KIỂM TRA DỮ LIỆU TOÀN BỘ NGÀY ---
+                day_check_query = {
+                    "camera_id": query_dict.get("camera_id", "CAM_01"),
+                    "timestamp": {
+                        "$gte": f"{date_raw}T00:00:00",
+                        "$lt": f"{date_raw}T23:59:59"
+                    }
+                }
+                # Chỉ tìm 1 bản ghi bất kỳ trong ngày đó để xác nhận sự tồn tại của dữ liệu
+                has_any_data_that_day = self.collection.find_one(day_check_query)
+
+                if has_any_data_that_day:
+                    # Trường hợp: Có dữ liệu trong ngày nhưng không có trong khung giờ yêu cầu
+                    start_t = gte_str.split('T')[1][:5] if 'T' in gte_str else "giờ bắt đầu"
+                    end_t = lt_str.split('T')[1][:5] if 'T' in lt_str else "giờ kết thúc"
+                    
+                    res = f"Trong ngày {date_display}, hệ thống có dữ liệu nhưng không ghi nhận hoạt động nào trong khung giờ từ {start_t} đến {end_t}."
+                else:
+                    # Trường hợp: Hoàn toàn không có dữ liệu cho cả ngày đó
+                    res = f"Hệ thống không tìm thấy bất kỳ dữ liệu camera nào trong ngày {date_display}."
+                
+                return error_generator(res) if stream else res   
+            
+            # --- GIỮ NGUYÊN TOÀN BỘ LOGIC XỬ LÝ DATA PHÍA DƯỚI ---
             first_ts_str = data_found[0]['timestamp'] 
             record_date = first_ts_str.split('T')[0]
             warns_info = {} 
@@ -241,8 +313,10 @@ class ElevatorAI:
             }
 
         except Exception as e:
+            print(f"[Error] Lỗi truy xuất: {e}")
             res = "Đã xảy ra lỗi trong quá trình truy xuất dữ liệu an ninh."
             return error_generator(res) if stream else res
         
         print(f"[Debug] Dữ liệu gửi cho AI phản hồi: {summary}")
         return self._humanize_response(user_question, summary, stream=stream)
+
