@@ -4,10 +4,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from engine import ElevatorAI
 import uvicorn
-import json
-import asyncio
-from transformers import TextIteratorStreamer
-from threading import Thread
+
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
