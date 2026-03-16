@@ -11,7 +11,7 @@ client = MongoClient(MONGO_URI)
 db = client["iot_project"]
 
 # 3️⃣ Chọn collection
-collection = db["sensor_data"]
+collection = db["Test"]
 
 # 4️⃣ Dữ liệu cần đẩy
 data = {
