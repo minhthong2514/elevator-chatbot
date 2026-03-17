@@ -1,5 +1,5 @@
 venv/
-*.gguf
+models-gguf/
 __pycache__
 models/
 docs/

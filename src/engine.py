@@ -18,7 +18,7 @@ class ElevatorAI:
         print(f"--- Đang khởi động AI trên thiết bị: {device.upper()} ---")
 
         # 1. Khởi tạo Model
-        self.model_path = "/media/minhthong/DATA/University/Nam_tu/TTTN/models"
+        self.model_path = "/home/tai/Ung_dung/Code/Python/Thuc_tap/models"
         
         print("Đang nạp model với cấu hình tối ưu tốc độ...")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)

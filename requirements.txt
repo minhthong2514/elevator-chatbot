@@ -1,4 +1,9 @@
+llama-cpp-python
 transformers
+huggingface_hub
+protobuf 
+sentencepiece 
+tiktoken
 torch
 accelerate
 pymongo 
