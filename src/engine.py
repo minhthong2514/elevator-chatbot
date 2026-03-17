@@ -20,12 +20,16 @@ class ElevatorAI:
         # 1. Khởi tạo Model
         self.model_path = "/media/minhthong/DATA/University/Nam_tu/TTTN/models"
         
-        print("Đang load model từ ổ cứng...")
+        print("Đang nạp model với cấu hình tối ưu tốc độ...")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+        
+        # Tối ưu: Sử dụng float16 trên CUDA để tăng tốc độ tính toán
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_path, 
-            torch_dtype="auto", 
-            device_map="auto"
+            torch_dtype=torch.float16 if device == "cuda" else torch.float32, 
+            device_map="auto",
+            low_cpu_mem_usage=True,
+            trust_remote_code=True
         )
         
         # 2. Cấu hình MongoDB
@@ -44,25 +48,26 @@ class ElevatorAI:
     def _call_ai_query(self, messages):
         """
         Inference tốc độ cao để trích xuất JSON.
-        Sử dụng cấu hình temperature của bản cũ để đảm bảo tính toán ngày tháng chính xác.
+        Sử dụng greedy decoding (do_sample=False) để ra kết quả tức thì.
         """
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
         
-        # Sử dụng cấu hình giống bản cũ (do_sample=True, temp=0.2) nhưng giới hạn token để nhanh hơn
-        output_ids = self.model.generate(
-            **inputs, 
-            max_new_tokens=150, 
-            do_sample=False, 
-            temperature=0.2, 
-            top_p=0.9
-        )
+        with torch.no_grad():
+            output_ids = self.model.generate(
+                **inputs, 
+                max_new_tokens=150, 
+                do_sample=False,  # Tối ưu: Tắt sampling để nhanh hơn cho JSON
+                temperature=0.2, 
+                top_p=0.9,
+                use_cache=True    # Tối ưu: Bật KV Cache
+            )
         return self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].split("assistant")[-1].strip()
 
     def _call_ai(self, messages, stream=False):
         """
         Hàm gọi AI cho việc viết báo cáo (Humanize).
-        Duy trì cấu hình bản cũ.
+        Duy trì cấu hình bản cũ nhưng bật use_cache.
         """
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
@@ -75,19 +80,22 @@ class ElevatorAI:
                 max_new_tokens=1024,
                 do_sample=True, 
                 temperature=0.5, 
-                top_p=0.9
+                top_p=0.9,
+                use_cache=True # Tối ưu: Bật KV Cache
             )
             thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
             thread.start()
             return streamer 
         else:
-            output_ids = self.model.generate(
-                **inputs, 
-                max_new_tokens=1024, 
-                do_sample=True, 
-                temperature=0.5,
-                top_p=0.9
-            )
+            with torch.no_grad():
+                output_ids = self.model.generate(
+                    **inputs, 
+                    max_new_tokens=1024, 
+                    do_sample=True, 
+                    temperature=0.5,
+                    top_p=0.9,
+                    use_cache=True # Tối ưu: Bật KV Cache
+                )
             return self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].split("assistant")[-1].strip()
     
     def _generate_query(self, user_question):
@@ -230,7 +238,12 @@ class ElevatorAI:
             return error_generator(res) if stream else res
         
         try:
-            cursor = self.collection.find(query_dict).sort("timestamp", 1)
+            # Tối ưu: Chỉ fetch các trường cần thiết từ MongoDB
+            cursor = self.collection.find(
+                query_dict, 
+                {"timestamp": 1, "people": 1}
+            ).sort("timestamp", 1)
+            
             data_found = list(cursor)
             
             if not data_found:
