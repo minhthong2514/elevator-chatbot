@@ -247,16 +247,26 @@ class ElevatorAI:
             data_found = list(cursor)
             
             if not data_found:
-                gte_str = query_dict.get('timestamp', {}).get('$gte', '')
-                date_raw = gte_str.split('T')[0] if 'T' in gte_str else gte_str
-                try:
-                    date_obj = datetime.strptime(date_raw, "%Y-%m-%d")
-                    display_date = date_obj.strftime("%d-%m-%Y")
-                except:
-                    display_date = date_raw
+                ts_query = query_dict.get('timestamp', {})
+                gte_str = ts_query.get('$gte', '')
+                lt_str = ts_query.get('$lt', '')
                 
-                res = f"Hệ thống hoàn toàn không có dữ liệu camera trong ngày {display_date}."
-                return error_generator(res) if stream else res   
+                # Tách ngày và giờ
+                try:
+                    date_part = gte_str.split('T')[0]
+                    display_date = datetime.strptime(date_part, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    
+                    time_start = gte_str.split('T')[1][:5] if 'T' in gte_str else "00:00"
+                    time_end = lt_str.split('T')[1][:5] if 'T' in lt_str else "23:59"
+                    
+                    if time_start == "00:00" and time_end == "23:59":
+                        res = f"Hệ thống hoàn toàn không có dữ liệu camera trong ngày {display_date}."
+                    else:
+                        res = f"Hệ thống không có dữ liệu camera trong khung giờ từ {time_start} đến {time_end} trong ngày {display_date}."
+                except:
+                    res = "Hệ thống không có dữ liệu camera trong khoảng thời gian này."
+                
+                return error_generator(res) if stream else res 
             
             first_ts_str = data_found[0]['timestamp'] 
             record_date = first_ts_str.split('T')[0]
