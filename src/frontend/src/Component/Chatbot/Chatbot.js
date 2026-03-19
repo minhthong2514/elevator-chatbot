@@ -17,44 +17,57 @@ function Chatbot() {
   }, [messages]);
 
   const startStreaming = async () => {
+    // 1. Chặn đứng việc gửi trùng lặp (Fix lỗi StrictMode và spam click)
     if (!input.trim() || isTyping) return;
 
     const userQuestion = input;
-    setMessages(prev => [...prev, { role: 'user', content: userQuestion }]);
     setInput('');
     setIsTyping(true);
 
-    // Thêm một tin nhắn trống cho Bot để chuẩn bị hứng dữ liệu stream
-    setMessages(prev => [...prev, { role: 'bot', content: '' }]);
+    // 2. Thêm cả 2 tin nhắn cùng lúc để đảm bảo tính đồng bộ
+    setMessages(prev => [
+      ...prev, 
+      { role: 'user', content: userQuestion },
+      { role: 'bot', content: '' } // Tin nhắn trống để chuẩn bị hứng stream
+    ]);
 
     try {
-      const response = await fetch('http://localhost:8000/ask', { // Địa chỉ FastAPI của bạn
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userQuestion })
-      });
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        
-        // Cập nhật từng chữ vào tin nhắn cuối cùng của Bot
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMsg = newMessages[newMessages.length - 1];
-          lastMsg.content += chunk;
-          return newMessages;
+        const response = await fetch('http://localhost:5000/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: userQuestion })
         });
-      }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+
+            // 3. Cập nhật nội dung cho tin nhắn cuối cùng (là tin nhắn Bot)
+            setMessages(prev => {
+                const newMessages = [...prev];
+                const lastIdx = newMessages.length - 1;
+                newMessages[lastIdx] = { 
+                    ...newMessages[lastIdx], 
+                    content: newMessages[lastIdx].content + chunk 
+                };
+                return newMessages;
+            });
+        }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'bot', content: 'Lỗi kết nối Server.' }]);
+        console.error("Streaming error:", error);
+        // Cập nhật thông báo lỗi vào đúng tin nhắn Bot cuối cùng
+        setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1].content = 'Lỗi kết nối Server.';
+            return newMessages;
+        });
     } finally {
-      setIsTyping(false);
+        setIsTyping(false);
     }
   };
 
