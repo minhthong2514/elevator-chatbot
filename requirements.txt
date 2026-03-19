@@ -1,7 +1,13 @@
+llama-cpp-python
 transformers
+huggingface_hub
+protobuf 
+sentencepiece 
+tiktoken
 torch
 accelerate
-pymongo 
-pydantic
 fastapi
 uvicorn
+pymongo
+pydantic
+python-dotenv
