@@ -1,6 +1,7 @@
 llama-cpp-python
 transformers
 huggingface_hub
+ultralytics
 protobuf 
 sentencepiece 
 tiktoken
@@ -10,4 +11,4 @@ fastapi
 uvicorn
 pymongo
 pydantic
-python-dotenv
+python-doten
