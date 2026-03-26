@@ -1,5 +1,12 @@
 venv/
-models-gguf/
-__pycache__
 models/
+models-gguf/
+models-vision/
+__pycache__
 docs/
+src/backend/.env
+src/frontend/.env
+
+src/frontend/node_modules
+src/backend/node_modules
+node_modules/

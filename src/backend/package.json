@@ -1,10 +1,13 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "server": "node server.js",
+    "client": "npm start --prefix my-app",
+    "dev": "concurrently \"cd ../frontend && npm start\" \"node server.js\" \"../../venv/bin/python3 main_vision.py\" \"../../venv/bin/python3 main_chatbot.py\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +16,7 @@
     "axios": "^1.13.6",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mongoose": "^9.3.3"
   }
 }

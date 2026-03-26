@@ -1,0 +1,18 @@
+/* web/src/Component/Header/Header.scss */
+
+.fb-header {
+  height: 60px;
+  padding: 0 20px;
+  display: flex; // Đã sửa lỗi "inline flex" thành "flex" chuẩn
+  align-items: center;
+  background-color: rgba(255, 255, 255, 1); 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  .fb-logo {
+    margin: 0;
+    font-size: 40px;
+    font-weight: 800; // Tăng độ dày cho logo nổi bật
+    color: rgba(24, 119, 242, 1); // Màu xanh đặc trưng
+    letter-spacing: -1px; // Thu hẹp khoảng cách chữ cho hiện đại
+  }
+}

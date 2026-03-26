@@ -1,0 +1,124 @@
+/* web/src/Component/DisplayCamera/DisplayCamera.scss */
+
+.camera-container {
+ display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 85px; // Giữ nguyên mức này
+  padding-bottom: 30px;
+
+  .video-box {
+    position: relative;
+    /* THU NHỎ KÍCH THƯỚC: 75% màn hình */
+    width: 90%;           
+    max-width: 1200px;    
+    aspect-ratio: 16 / 9; 
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 1);
+    border: 1px solid rgba(26, 26, 26, 1);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scale(1.002);
+      border-color: rgba(51, 51, 51, 1);
+    }
+
+    .camera-stream {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; // Đổi sang cover để không bị méo hình khi thu nhỏ
+      display: block;
+    }
+
+    /* CSS CHO LỚP PHỦ MÀN ĐEN */
+    .camera-privacy-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      
+      /* Hiệu ứng mờ dần */
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.4s ease-in-out;
+
+      &.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .overlay-content {
+        text-align: center;
+        color: #fff;
+
+        .privacy-icon {
+          margin-bottom: 15px;
+          color: rgba(52, 152, 219, 1);
+          filter: drop-shadow(0 0 10px rgba(52, 152, 219, 0.5));
+        }
+
+        p {
+          font-size: 18px;
+          font-weight: bold;
+          letter-spacing: 1px;
+          margin-bottom: 5px;
+        }
+
+        span {
+          font-size: 14px;
+          opacity: 0.6;
+        }
+      }
+    }
+  }
+
+  .status-text {
+    margin-top: 25px;
+    font-size: 22px; // Giảm nhẹ size cho cân đối với khung camera mới
+    color: var(--text-menu);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      
+      &.live {
+        background-color: #42b72a;
+        animation: pulse-green 1.8s infinite; 
+      }
+      &.error {
+        background-color: #e74c3c;
+        animation: pulse-red 1.8s infinite;
+      }
+    }
+
+    .live { color: #42b72a; font-weight: 800; }
+    .error { color: #e74c3c; font-weight: 800; }
+  }
+}
+
+// Giữ các hiệu ứng keyframes pulse-green và pulse-red của Tài...
+@keyframes pulse-green {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(66, 183, 42, 0.6); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(66, 183, 42, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(66, 183, 42, 0); }
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.6); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}

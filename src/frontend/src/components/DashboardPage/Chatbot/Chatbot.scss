@@ -1,0 +1,135 @@
+/* web/src/Component/Chatbot/Chatbot.scss */
+
+.chatbot-main-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 85px;  /* ĐỔI padding-top THÀNH margin-top: 85px ĐỂ BẰNG CAMERA */
+  padding-bottom: 30px;
+}
+
+.chatbot-wrapper {
+  background-color: var(--chatbot-bg) !important; 
+  border: 1px solid var(--chatbot-border);
+  
+  /* --- ĐIỀU CHỈNH KÍCH THƯỚC GỌN LẠI --- */
+  width: 90%;          /* Thu hẹp chiều ngang để không chạm mép màn hình */
+  max-width: 1200px;   /* Giới hạn độ rộng tối đa cho màn hình lớn */
+  
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+
+  /* --- KHÓA CHIỀU CAO HỢP LÝ --- */
+  height: 75vh;        /* Giảm chiều cao xuống để không bị dính sát mép trên/dưới */
+  min-height: 600px;   /* Đảm bảo vẫn đủ không gian trên các màn hình nhỏ */
+  
+  border-radius: 20px; /* Bo góc nhẹ nhàng hơn giúp khung nhìn nhỏ gọn hơn */
+  transition: none;    
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); 
+  overflow: hidden;
+
+  .chatbot-header-bg {
+    background: var(--chatbot-header-bg); 
+    padding: 15px 20px; /* GIẢM PADDING: Làm mỏng thanh tiêu đề elevator */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--chatbot-border);
+    flex-shrink: 0;
+
+    h2 {
+        margin: 0;
+        font-size: calc(var(--app-font-size) + 8px); /* Giảm cỡ chữ tiêu đề 1 chút cho cân đối */
+        letter-spacing: 1.5px;
+        text-align: center;
+        font-weight: 800;
+        text-transform: uppercase;
+        background: linear-gradient(to bottom, #ffffff, #d1d1d1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+  }
+
+  #chat-container {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    padding: 20px 40px; /* Giảm nhẹ padding bên trong khung chat */
+    overflow-y: auto;
+    gap: 15px; 
+    background: transparent;
+    justify-content: flex-start;
+
+    /* Ẩn thanh cuộn mặc định và làm đẹp scrollbar */
+    &::-webkit-scrollbar { width: 6px; }
+    &::-webkit-scrollbar-thumb { 
+        background: rgba(255, 255, 255, 0.1); 
+        border-radius: 10px; 
+    }
+
+    .message {
+      max-width: 65%; 
+      padding: 12px 16px;
+      font-size: var(--app-font-size); 
+      line-height: 1.5;
+
+      &.user-message {
+        align-self: flex-end;
+        background-color: var(--msg-user-bg);
+        color: var(--text-user-color);
+        border-radius: 18px 18px 4px 18px; 
+      }
+
+      &.ai-message {
+        align-self: flex-start;
+        background-color: var(--msg-ai-bg);
+        color: var(--text-ai-color);
+        border-radius: 18px 18px 18px 4px; 
+        border: 1px solid var(--chatbot-border);
+      }
+    }
+  }
+
+  .input-area {
+    background-color: var(--input-area-bg);
+    border-top: 1px solid var(--input-area-border);
+    padding: 15px 40px; /* Làm gọn khu vực nhập liệu */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+
+    input {
+      flex: 1;
+      background: var(--bg-app);
+      border: 1px solid var(--input-area-border);
+      border-radius: 30px;
+      padding: 12px 20px;
+      color: var(--input-text-color);
+      outline: none;
+      font-size: var(--app-font-size); 
+      &:focus { border-color: var(--btn-bg); }
+    }
+
+    button {
+        background-color: var(--btn-bg) !important;
+        color: #fff;
+        border: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: transform 0.2s;
+        &:hover { transform: scale(1.1); }
+        &:active { transform: scale(0.95); } /* Hiệu ứng nhấn nút */
+      }
+    }
+}

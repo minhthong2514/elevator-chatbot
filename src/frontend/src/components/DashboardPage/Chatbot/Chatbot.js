@@ -72,33 +72,38 @@ function Chatbot() {
   };
 
   return (
-    <div className="chatbot-wrapper">
-      <div className="header-logo">
-        <div className="logo-box">AI</div>
-      </div>
+    <div className="chatbot-main-container"> 
+      <div className="chatbot-wrapper">
+        
+        {/* Tiêu đề */}
+        <div className="chatbot-header-bg">
+          <h2>ELEVATOR CHATBOT</h2>
+        </div>
 
-      <h2>ELEVATOR CHATBOT</h2>
+        {/* Vùng tin nhắn */}
+        <div id="chat-container" ref={chatContainerRef}>
+          {messages.map((msg, index) => (
+            <div key={index} className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}>
+              {msg.content === '' && msg.role === 'bot' ? <em>Đang trích xuất dữ liệu...</em> : msg.content}
+            </div>
+          ))}
+        </div>
 
-      <div id="chat-container" ref={chatContainerRef}>
-        {messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}>
-            {msg.content === '' && msg.role === 'bot' ? <em>Đang trích xuất dữ liệu...</em> : msg.content}
-          </div>
-        ))}
-      </div>
+        {/* Vùng nhập liệu */}
+        <div className="input-area">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Hỏi về sự cố, người ngã, nằm..."
+            onKeyPress={(e) => e.key === 'Enter' && startStreaming()}
+            disabled={isTyping}
+          />
+          <button onClick={startStreaming} disabled={isTyping}>
+            {isTyping ? '...' : 'Gửi'}
+          </button>
+        </div>
 
-      <div className="input-area">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Hỏi về sự cố, người ngã, nằm..."
-          onKeyPress={(e) => e.key === 'Enter' && startStreaming()}
-          disabled={isTyping}
-        />
-        <button onClick={startStreaming} disabled={isTyping}>
-          {isTyping ? '...' : 'Gửi'}
-        </button>
       </div>
     </div>
   );
