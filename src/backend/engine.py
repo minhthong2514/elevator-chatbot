@@ -4,7 +4,9 @@ import urllib.parse
 from pymongo import MongoClient
 from llama_cpp import Llama
 import torch
+from dotenv import load_dotenv
 
+load_dotenv()
 # Tắt cảnh báo
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -15,7 +17,7 @@ class ElevatorAI:
         print(f"--- Đang khởi động AI trên thiết bị: {device.upper()} ---")
 
         # 1. Khởi tạo Model GGUF
-        self.model_path = "/home/tai/Ung_dung/Code/Python/Thuc_tap/models-gguf/qwen2.5-1.5b-instruct-q4_0.gguf"
+        self.model_path = os.getenv("MODEL_CHATBOT_PATH")
         
         if not os.path.exists(self.model_path):
             print(f"LỖI: Không tìm thấy file GGUF tại {self.model_path}")
@@ -29,17 +31,24 @@ class ElevatorAI:
         )
         
         # 2. Cấu hình MongoDB
-        USER = "buiminhtai1234"
-        PASSWORD = "191104"
-        CLUSTER_URL = "cluster0.ydqe2ve.mongodb.net" 
-        safe_pass = urllib.parse.quote_plus(PASSWORD)
-        self.uri = f"mongodb+srv://{USER}:{safe_pass}@{CLUSTER_URL}/?retryWrites=true&w=majority&appName=test-model"
+        db_user = (os.getenv("MONGO_USER") or os.getenv("USER")).strip().replace('"', '')
+        db_pass = os.getenv("PASSWORD", "").strip().replace('"', '')
+        cluster_url = os.getenv("CLUSTER_URL", "").strip().replace('"', '')
         
-        self.client = MongoClient(self.uri)
-        self.db = self.client['iot_project']
-        self.collection = self.db['human_behavior']
+        db_name = os.getenv("DB", "iot_project").strip().replace('"', '')
+        collection_name = os.getenv("COLLECTION", "human_behavior").strip().replace('"', '')
+
+        # Mã hóa mật khẩu an toàn cho URL
+        safe_pass = urllib.parse.quote_plus(db_pass)
         
-        print("Trợ lý AI GGUF đã sẵn sàng kết nối cơ sở dữ liệu.")
+        # Xây dựng URI chuẩn
+        self.uri = f"mongodb+srv://{db_user}:{safe_pass}@{cluster_url}/?retryWrites=true&w=majority&appName=test-model"
+        self.client = MongoClient(self.uri, serverSelectionTimeoutMS=5000)
+        self.client.admin.command('ping')
+        self.db = self.client[db_name]
+        self.collection = self.db[collection_name]
+        print("Trợ lý AI GGUF đã sẵn sàng.")
+
 
     def _call_ai_query(self, messages):
         """Inference GGUF cho việc trích xuất JSON - Ép độ chính xác cao"""

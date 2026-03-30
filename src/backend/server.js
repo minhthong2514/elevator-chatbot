@@ -2,7 +2,7 @@ require('dotenv').config(); // Dòng này bắt buộc ở trên cùng
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-
+const axios = require('axios');
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -73,6 +73,7 @@ app.post('/ask', async (req, res) => {
 
     // Thiết lập Header để chuẩn bị Stream về cho React
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked'); // Đảm bảo stream mượt mà
 
     try {
         // Node.js "Call API" sang Python AI Service
@@ -92,7 +93,13 @@ app.post('/ask', async (req, res) => {
             res.end();
         });
 
+        aiResponse.data.on('error', (err) => {
+            console.error("Stream error:", err);
+            res.end();
+        });
+
     } catch (error) {
+        console.error("Lỗi gọi AI Service:", error.message);
         res.write("Lỗi: Không thể kết nối với AI Service.");
         res.end();
     }

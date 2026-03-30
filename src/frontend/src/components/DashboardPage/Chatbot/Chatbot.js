@@ -84,7 +84,11 @@ function Chatbot() {
         <div id="chat-container" ref={chatContainerRef}>
           {messages.map((msg, index) => (
             <div key={index} className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}>
-              {msg.content === '' && msg.role === 'bot' ? <em>Đang trích xuất dữ liệu...</em> : msg.content}
+              {msg.role === 'bot' && msg.content === '' ? (
+                <span className="typing-loader">Đang trích xuất dữ liệu...</span>
+              ) : (
+                msg.content
+              )}
             </div>
           ))}
         </div>

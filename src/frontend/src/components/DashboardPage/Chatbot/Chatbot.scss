@@ -73,10 +73,11 @@
     }
 
     .message {
-      max-width: 65%; 
+      max-width: 75%; 
       padding: 12px 16px;
       font-size: var(--app-font-size); 
-      line-height: 1.5;
+      line-height: 1.6;
+      white-space: pre-wrap;
 
       &.user-message {
         align-self: flex-end;
@@ -91,6 +92,7 @@
         color: var(--text-ai-color);
         border-radius: 18px 18px 18px 4px; 
         border: 1px solid var(--chatbot-border);
+        text-align: left;
       }
     }
   }
