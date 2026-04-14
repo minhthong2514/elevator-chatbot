@@ -1,3 +1,4 @@
+// file này cấu hình hiển thị camera của user
 import React, { useState } from 'react';
 import { EyeOff } from 'lucide-react'; // Dùng icon của lucide cho đồng bộ
 import './DisplayCamera.scss'; 

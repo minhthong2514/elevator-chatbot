@@ -1,0 +1,55 @@
+.admin-delete-user-container {
+  display: flex;
+  justify-content: center;
+  padding-top: 50px;
+  width: 100%;
+
+  .delete-card {
+    background: rgba(255, 255, 255, 1);
+    padding: 40px;
+    border-radius: 20px;
+    width: 500px;
+    box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(211, 47, 47, 0.2);
+
+    .delete-title { 
+      color: rgba(211, 47, 47, 1); 
+      font-size: 22px; 
+      font-weight: 800; 
+      margin-bottom: 25px; 
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
+    }
+
+    .input-group {
+      label { display: block; margin-bottom: 8px; font-weight: 600; color: rgba(60, 60, 60, 1); }
+      input {
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: 2px solid rgba(180, 180, 180, 0.4);
+        font-size: 15px;
+        box-sizing: border-box;
+        &:focus { border-color: rgba(211, 47, 47, 1); outline: none; }
+      }
+    }
+
+    .btn-delete {
+      width: 100%;
+      padding: 15px;
+      background-color: rgba(211, 47, 47, 1);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      margin-top: 25px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+    }
+  }
+}

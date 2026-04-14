@@ -1,3 +1,5 @@
+// file này là file main 
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './index.scss';
@@ -8,29 +10,32 @@ import DisplayCamera from './components/DashboardPage/DisplayCamera/DisplayCamer
 import NavButton from './components/DashboardPage/NavButton/NavButton';
 import Chatbot from './components/DashboardPage/Chatbot/Chatbot'; 
 
-// KHÔNG CẦN IMPORT API_ENDPOINTS NỮA
+// --- SỬA LẠI PHẦN IMPORT Ở ĐÂY ---
+import AdminSidebar from './components/AdminDashboard/AdminSiderbar/AdminSiderbar'; 
+import AdminContent from './components/AdminDashboard/AdminContent/AdminContent'; // File nội dung mới tạo
+
 
 function AppContent() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRank, setUserRank] = useState('user');
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState('camera');
+  const [adminTab, setAdminTab] = useState('monitor'); 
 
-  // LẤY TRỰC TIẾP TỪ BIẾN MÔI TRƯỜNG
   const BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const projectName = "ELEVATOR MONITOR CHATBOT";
-
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("mode") === "dark");
   const [isCameraHidden, setIsCameraHidden] = useState(false);
 
   useEffect(() => {
-    console.log(process.env.REACT_APP_FASTAPI_URL)
     const savedLogin = sessionStorage.getItem("isLoggedIn") === "true";
     if (savedLogin) {
       setIsLoggedIn(true);
       setUsername(sessionStorage.getItem("username") || "");
+      setUserRank(sessionStorage.getItem("userRank") || "user");
     }
   }, []);
 
@@ -49,74 +54,43 @@ function AppContent() {
   const toggleCameraPrivacy = () => {
     setIsCameraHidden(!isCameraHidden);
   };
-
-  const handleUsernameChange = (val) => {
-    const noSpaceValue = val.replace(/\s/g, ''); 
-    setUsername(noSpaceValue);
-  };
-
-  // --- XỬ LÝ ĐĂNG KÝ TRỰC TIẾP VỚI BASE_URL ---
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    if (!username) return alert("Vui lòng nhập tên đăng nhập!");
-
-    try {
-      const response = await fetch(`${BASE_URL}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, rank: 'user' })
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert("Đăng ký thành công!");
-        setIsRegistering(false);
-        setUsername(''); setPassword('');
-      } else {
-        alert(data.message || "Đăng ký thất bại!");
-      }
-    } catch (err) {
-      alert("Lỗi kết nối đến Server!");
-    }
-  };
-
-  // --- XỬ LÝ ĐĂNG NHẬP TRỰC TIẾP VỚI BASE_URL ---
+  
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username) return alert("Vui lòng nhập tên đăng nhập!");
-
     try {
-      // Gọi trực tiếp URL nối chuỗi ở đây
       const response = await fetch(`${BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
       const data = await response.json();
+
       if (data.success) {
         setIsLoggedIn(true);
+        setUserRank(data.rank);
         sessionStorage.setItem("isLoggedIn", "true");
-        sessionStorage.setItem("username", username);
-        if (data.cameraUrl) sessionStorage.setItem("cameraUrl", data.cameraUrl);
-        navigate("/dashboard");
+        sessionStorage.setItem("username", data.username);
+        sessionStorage.setItem("userRank", data.rank);
+        
+        if (data.rank === 'admin') navigate("/admin-dashboard");
+        else navigate("/dashboard");
       } else {
-        alert(data.message || "Sai tên đăng nhập hoặc mật khẩu!");
+        alert("Sai tài khoản!");
       }
     } catch (err) {
-      console.error("Login Error:", err);
-      alert("Server chưa hoạt động hoặc lỗi địa chỉ API!");
+      alert("Lỗi server!");
     }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setUsername("");
     sessionStorage.clear();
     navigate("/"); 
   };
 
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
-      {isLoggedIn && (
+      {isLoggedIn && userRank !== 'admin' && (
         <div className="global-header">
           <img src="/imgs/bug-removebg-preview.png" alt="Logo" className="dashboard-logo" />
         </div>
@@ -124,14 +98,12 @@ function AppContent() {
 
       <Routes>
         <Route path="/" element={
-          isLoggedIn ? <Navigate to="/dashboard" replace /> : (
-            <LoginForm 
-              isRegistering={isRegistering} setIsRegistering={setIsRegistering}
-              handleLogin={handleLogin} handleRegister={handleRegister}
-              username={username} setUsername={handleUsernameChange}
-              password={password} setPassword={setPassword}
-            />
-          )
+          isLoggedIn ? <Navigate to={userRank === 'admin' ? "/admin-dashboard" : "/dashboard"} replace /> : 
+          <LoginForm 
+            isRegistering={isRegistering} setIsRegistering={setIsRegistering}
+            handleLogin={handleLogin} username={username} setUsername={setUsername}
+            password={password} setPassword={setPassword}
+          />
         } />
         
         <Route path="/dashboard" element={
@@ -153,12 +125,32 @@ function AppContent() {
             </div>
           ) : <Navigate to="/" replace />
         } />
-        <Route path="*" element={<Navigate to="/" replace />} />
+
+        {/* --- ROUTE ADMIN: QUẢN LÝ TABS --- */}
+        <Route path="/admin-dashboard" element={
+          isLoggedIn && userRank === 'admin' ? (
+            <div className="admin-layout" style={{ display: 'flex', width: '100%' }}>
+              <AdminSidebar 
+                activeTab={adminTab} 
+                setActiveTab={setAdminTab} 
+                onLogout={handleLogout} 
+              />
+              <div className="admin-main-content" style={{ flex: 1, backgroundColor: 'rgba(180, 180, 180, 1)' }}>
+                {/* Ở đây AdminContent sẽ dựa vào giá trị của adminTab để hiển thị:
+                  - monitor
+                  - add-user
+                  - edit-user (Phần mới thêm)
+                */}
+                <AdminContent activeTab={adminTab} setAdminTab={setAdminTab} />
+              </div>
+            </div>
+          ) : <Navigate to="/" replace />
+        } />
       </Routes>
     </div>
   );
 }
- 
+
 function App() {
   return (
     <BrowserRouter>

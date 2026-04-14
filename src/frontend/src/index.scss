@@ -4,46 +4,51 @@
   // --- 1. MÀU SẮC HỆ THỐNG (LIGHT MODE) ---
   --title-color: rgba(0, 0, 0, 1);
   --title-shadow: rgba(0, 0, 0, 0.1);
-  --bg-app: rgba(240, 242, 245, 1);
-  --bg-menu: rgba(255, 255, 255, 0.9);
+  --bg-app: rgb(190, 190, 190);
+  --bg-menu: rgb(189, 189, 189);
   --text-menu: rgba(26, 29, 35, 1);
 
   // --- 2. GIAO DIỆN CHATBOT ---
-  --chatbot-bg: rgba(255, 255, 255, 0.95);
+  --chatbot-bg: rgba(180, 180, 180, 1); // Đã đổi từ trắng sang xám dịu
   --chatbot-border: rgba(0, 0, 0, 0.05);
-  --chatbot-header-bg: linear-gradient(135deg, rgba(0, 98, 255, 1), rgba(0, 162, 255, 1));
+  // Đổi gradient xanh dương về mã (0, 80, 255, 1)
+  --chatbot-header-bg: linear-gradient(135deg, rgba(0, 80, 255, 1), rgba(0, 120, 255, 1));
+  
   --msg-ai-bg: rgba(0, 0, 0, 0.08);
   --text-ai-color: rgba(28, 30, 33, 1);
-  --msg-user-bg: rgba(0, 132, 255, 1);
-  --text-user-color: rgba(255, 255, 255, 1);
+  
+  --msg-user-bg: rgba(0, 80, 255, 1); // Đã đồng bộ màu xanh dương (0, 80, 255, 1)
+  --text-user-color: rgba(180, 180, 180, 1); // Màu chữ user cũng về xám dịu
 
   // --- 3. Ô NHẬP LIỆU ---
-  --input-area-bg: rgba(0, 120, 255, 1);
+  --input-area-bg: rgba(0, 80, 255, 1); // Đồng bộ xanh dương
   --input-area-border: rgba(0, 0, 0, 0.1);
   --input-text-color: rgba(0, 0, 0, 1);
-  --btn-bg: rgba(0, 132, 255, 1);
+  --btn-bg: rgb(0, 0, 255); // Đồng bộ xanh dương
   
-  --app-font-size: 16px; // Biến dùng cho NavButton
+  --app-font-size: 16px; 
   ---lable-tab-buton: rgba(0, 0, 0, 1);
 }
+
 /* --- DARK MODE OVERRIDE --- */
 body.dark-mode {
-  --title-color: rgba(255, 255, 255, 1);
-  --bg-app: rgba(11, 12, 16, 0.8); // Đưa về đặc để tránh lag trên Jetson
+  --title-color: rgba(180, 180, 180, 1); // Title xám dịu
+  --bg-app: rgba(11, 12, 16, 0.8); 
   --bg-menu: rgba(28, 30, 33, 0.8);
-  --text-menu: rgba(228, 230, 235, 1);
+  --text-menu: rgba(180, 180, 180, 1); // Đổi từ trắng sang xám dịu
 
   --chatbot-bg: rgba(28, 30, 33, 0.98);
-  --chatbot-border: rgba(255, 255, 255, 0.1);
+  --chatbot-border: rgba(180, 180, 180, 0.1); // Border xám dịu
   --chatbot-header-bg: linear-gradient(135deg, rgba(22, 34, 42, 1), rgba(58, 96, 115, 1));
 
-  --msg-ai-bg: rgba(255, 255, 255, 0.12);
-  --text-ai-color: rgba(228, 230, 235, 1);
+  --msg-ai-bg: rgba(180, 180, 180, 0.12); // AI message nền xám dịu
+  --text-ai-color: rgba(180, 180, 180, 1); // Chữ AI xám dịu
+  
   --input-area-bg: rgba(36, 37, 38, 1);
-  --input-text-color: rgba(228, 230, 235, 1);
+  --input-text-color: rgba(180, 180, 180, 1); // Chữ input xám dịu
   --btn-bg: rgba(45, 52, 64, 1);
 
-  --lable-tab-buton: rgba(255, 255, 255, 1)
+  --lable-tab-buton: rgba(180, 180, 180, 1); // Label nút xám dịu
 }
 
 /* --- THIẾT LẬP CHUNG --- */
@@ -55,7 +60,7 @@ body {
   overflow-x: hidden;
 }
 
-/* --- DẠNG BỐ CỤC DASHBOARD (Thay thế inline style App.js) --- */
+/* --- DASHBOARD LAYOUT --- */
 .dashboard-layout {
   position: relative;
   display: flex;
@@ -75,17 +80,17 @@ body {
   }
 
   .content-container {
-    width: 70%; // Khớp với yêu cầu cũ của Tài
+    width: 70%; 
     display: flex;
     justify-content: center;
     padding-bottom: 50px;
-    height: calc(100vh - 200px); // Trừ đi khoảng cách của Header và Title
+    height: calc(100vh - 200px); 
     display: flex;
     flex-direction: column;
   }
 }
 
-/* --- GLOBAL HEADER (LOGO BUG) --- */
+/* --- GLOBAL HEADER --- */
 .global-header {
   position: fixed;
   top: 15px;

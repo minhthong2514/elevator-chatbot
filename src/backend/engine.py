@@ -52,6 +52,7 @@ class ElevatorAI:
 
     def _call_ai_query(self, messages):
         """Inference GGUF cho việc trích xuất JSON - Ép độ chính xác cao"""
+        # ... (Giữ nguyên tuyệt đối phần này) ...
         prompt = ""
         for msg in messages:
             prompt += f"<|im_start|>{msg['role']}\n{msg['content']}<|im_end|>\n"
@@ -69,6 +70,7 @@ class ElevatorAI:
 
     def _call_ai(self, messages, stream=False):
         """Inference GGUF cho việc viết báo cáo"""
+        # ... (Giữ nguyên tuyệt đối phần này) ...
         prompt = ""
         for msg in messages:
             prompt += f"<|im_start|>{msg['role']}\n{msg['content']}<|im_end|>\n"
@@ -100,14 +102,13 @@ class ElevatorAI:
             return output['choices'][0]['text'].strip()
     
     def _generate_query(self, user_question):
-        """Trích xuất JSON - Cải tiến Prompt tổng quát hóa Intent của người dùng"""
+        """Trích xuất JSON - Điều chỉnh mapping theo cấu trúc start_time mới"""
         now = datetime.now()
         current_year = now.year
 
         processed_question = user_question.lower()
         print(f"[Input] {processed_question}")
         
-        # Chuẩn hóa ngày tháng
         date_pattern = r'(\d{1,2})[/-](\d{1,2})(?!\d|/|-)'
         if re.search(date_pattern, processed_question):
             processed_question = re.sub(date_pattern, rf'\1/\2/{current_year}', processed_question)
@@ -116,7 +117,6 @@ class ElevatorAI:
         yesterday_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
         now_full = now.strftime("%Y-%m-%dT%H:%M:%S")
 
-        # SYSTEM PROMPT MỚI: TẬP TRUNG VÀO NGỮ CẢNH (INTENT) THAY VÌ TỪ KHÓA CỨNG
         system_prompt = (
             f"BẠN LÀ MÁY TRÍCH XUẤT THÔNG TIN CAMERA. GIỜ HỆ THỐNG: {now_full}.\n"
             f"Hôm nay: {today_date}. Hôm qua: {yesterday_date}.\n\n"
@@ -130,7 +130,7 @@ class ElevatorAI:
             "   - 'Ai đã vào?' -> Intent: Kiểm tra nhân viên.\n"
             "   - 'Ngày 3/3 có gì lạ?' -> Intent: Truy xuất dữ liệu ngày cụ thể.\n\n"
             "QUY TẮC TRẢ VỀ:\n"
-            "- LUÔN trả về JSON: {\"camera_id\": \"CAM_01\", \"timestamp\": {\"$gte\": \"...\", \"$lt\": \"...\"}}\n"
+            "- LUÔN trả về JSON: {\"camera_id\": \"CAM_01\", \"start_time\": {\"$gte\": \"...\", \"$lt\": \"...\"}}\n"
             "- CHỈ trả về {\"error\": \"out_of_scope\"} khi người dùng hỏi về: thời tiết, nấu ăn, kiến thức chung không liên quan camera.\n"
             "- KHÔNG GIẢI THÍCH, CHỈ XUẤT JSON."
         )
@@ -144,208 +144,175 @@ class ElevatorAI:
         print(f"--- AI RAW RESPONSE (QUERY): {raw_res} ---")
 
         try:
-            # Xử lý chuỗi thô (Giữ nguyên logic fix của bạn)
             clean_res = re.sub(r'```json|```', '', raw_res).strip()
-            if clean_res.startswith('{{') and clean_res.endswith('}}'):
-                clean_res = clean_res[1:-1]
-            clean_res = clean_res.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
-            
             start_idx = clean_res.find('{')
             end_idx = clean_res.rfind('}')
             
             if start_idx != -1 and end_idx != -1:
                 json_str = clean_res[start_idx:end_idx+1]
-                
-                try:
-                    result = json.loads(json_str)
-                except Exception:
-                    try:
-                        result = ast.literal_eval(json_str)
-                    except:
-                        json_str_fixed = json_str.replace('{{', '{').replace('}}', '}')
-                        try:
-                            result = json.loads(json_str_fixed)
-                        except:
-                            return {"error": "out_of_scope"}
+                result = ast.literal_eval(json_str) if "{" in json_str else json.loads(json_str)
 
                 if isinstance(result, dict):
                     if result.get("error") == "out_of_scope":
                         return {"error": "out_of_scope"}
                     
-                    # Trích xuất timestamp linh hoạt hơn
-                    if "timestamp" in result:
-                        raw_ts = result["timestamp"]
-                        clean_ts = {str(k).strip(): v for k, v in raw_ts.items()}
-                        return {
-                            "camera_id": str(result.get("camera_id", "CAM_01")),
-                            "timestamp": clean_ts
-                        }
-                    # Nếu AI chỉ trả về camera_id (do hỏi chung chung)
-                    elif "camera_id" in result:
-                        return {
-                            "camera_id": result["camera_id"],
-                            "timestamp": {"$gte": f"{today_date}T00:00:00", "$lt": f"{today_date}T23:59:59"}
-                        }
+                    query_time_key = "start_time" if "start_time" in result else "timestamp"
+                    time_val = result.get(query_time_key)
+
+                    return {
+                        "camera_id": str(result.get("camera_id", "CAM_01")),
+                        "start_time": time_val if time_val else {"$gte": f"{today_date}T00:00:00", "$lt": f"{today_date}T23:59:59"}
+                    }
                 
             return {"error": "out_of_scope"}
-        except Exception as e:
-            print(f"Lỗi phân tách JSON: {e}")
+        except Exception:
             return {"error": "out_of_scope"}
         
     def _humanize_response(self, user_question, summary, stream=False):
-        """Giữ nguyên cấu trúc báo cáo đanh thép"""
+        """Phân loại phản hồi linh hoạt dựa trên tình trạng an ninh"""
         raw_date = summary.get('date', 'N/A')
         formatted_date = "/".join(raw_date.split("-")[::-1])
         start_t = summary['time_range']['start']
         end_t = summary['time_range']['end']
-        context_data = "\n".join(summary['details'])
         
         is_urgent = summary.get('is_emergency', False)
-        status_label = "CẢNH BÁO NGUY HIỂM - XUẤT HIỆN HÀNH VI BẤT THƯỜNG" if is_urgent else "BÌNH THƯỜNG"
+        total_p = summary.get('total_people', 0)
+        total_w = summary.get('total_warnings', 0)
+
+        # TRƯỜNG HỢP 1: BÌNH THƯỜNG - TRẢ VỀ CỰC KỲ NGẮN GỌN
+        if not is_urgent:
+            system_prompt = "BẠN LÀ TRỢ LÝ GIÁM SÁT AN NINH THANG MÁY. PHẢN HỒI CỰC KỲ NGẮN GỌN BẰNG TIẾNG VIỆT TRONG 2 DÒNG."
+            user_content = (
+                f"DỮ LIỆU ĐƯỢC TRUY XUẤT VÀO NGÀY {formatted_date}, BẮT ĐẦU TỪ {start_t} TỚI {end_t}.\n"
+                f"[TRẠNG THÁI AN NINH]: BÌNH THƯỜNG (Ghi nhận {total_p} người vào, {total_w} sự cố) - HỆ THỐNG AN TOÀN."
+            )
+            messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_content}]
+            return self._call_ai(messages, stream=stream)
+
+        # TRƯỜNG HỢP 2: CÓ SỰ CỐ - GIỮ NGUYÊN PROMPT ĐANH THÉP
+        context_data = "\n".join(summary['details'])
+        status_label = f"CẢNH BÁO NGUY HIỂM ({total_p} người đã vào | {total_w} hành vi bất thường)"
 
         system_prompt = (
-            "BẠN LÀ TRỢ LÝ GIÁM SÁT AN NINH THANG MÁY - NGÔN NGỮ TRỰC TIẾP, ĐANH THÉP.\n"
+            "BẠN LÀ TRỢ LÝ GIÁM SÁT AN NINH THANG MÁY - NGÔN NGỮ TIẾNG VIỆT TRỰC TIẾP, ĐANH THÉP, CHUYÊN NGHIỆP.\n"
             "NHIỆM VỤ: Lập báo cáo từ dữ liệu camera. Tuyệt đối không mâu thuẫn dữ liệu.\n"
-            "BỐI CẢNH QUAN TRỌNG: Hệ thống chỉ truy xuất các trường hợp có dấu hiệu bất thường. "
-            "DO ĐÓ: TẤT CẢ nhân viên xuất hiện trong 'DỮ LIỆU GỐC' đều được coi là đối tượng vi phạm hoặc liên quan trực tiếp đến sự cố.\n"
-            "QUY TẮC CẤM:\n"
-            "1. CẤM in lại tiêu đề 'DỮ LIỆU GỐC', 'NHIỆM VỤ', 'QUY TẮC'.\n"
-            "2. CẤM viết lại các câu hướng dẫn, câu ví dụ hay nội dung trong ngoặc đơn.\n"
-            "3. CẤM các từ ngữ lịch sự thừa thãi như: 'Xin vui lòng', 'Cần được', 'Hãy', 'Trân trọng', 'Cảm ơn'.\n"
+            "QUY TẮC QUAN TRỌNG:\n"
+            "1. LUÔN LUÔN trả lời bằng TIẾNG VIỆT 100%. Dịch tất cả các từ tiếng Anh sang tiếng Việt (vd: sitting -> đang ngồi, lying -> đang nằm).\n"
+            "2. CẤM sử dụng các cụm từ: 'DỮ LIỆU GỐC', 'GIAO BÁO', 'TRUY XUẤY' (phải dùng TRUY XUẤT).\n"
+            "3. CẤM các từ ngữ lịch sự thừa thãi, CẤM lặp từ gây khó hiểu.\n"
             "4. CẤM liệt kê danh sách xuống dòng ở mục YÊU CẦU HÀNH ĐỘNG.\n"
             f"LƯU Ý THỜI GIAN: Hôm nay là {formatted_date}.\n"
             "QUY TẮC VIẾT:\n"
-            "- [TRẠNG THÁI AN NINH]: Viết giá trị trạng thái ngay sau dấu hai chấm.\n"
-            "- [CHI TIẾT SỰ KIỆN]: Liệt kê mỗi người một dòng: ghi rõ hành vi, mốc thời gian và chốt trạng thái (BÌNH THƯỜNG hoặc NGUY HIỂM).\n"
-            "- [YÊU CẦU HÀNH ĐỘNG]: Phải liệt kê RÕ TÊN TẤT CẢ những người có tên trong danh sách chi tiết vào chung một đoạn văn ngắn gọn duy nhất yêu cầu người quản lý phải kiểm tra gấp vì toàn bộ danh sách này đều bị hệ thống đánh dấu bất thường."
+            "- [TRẠNG THÁI AN NINH]: Viết giá trị trạng thái bao gồm cả thông số người và cảnh báo ngay sau dấu hai chấm.\n"
+            "- [THÔNG TIN CHI TIẾT]: Liệt kê mỗi người một dòng: ghi rõ hành vi (SỬ DỤNG TIẾNG VIỆT), mốc thời gian và chốt trạng thái (BÌNH THƯỜNG hoặc NGUY HIỂM).\n"
+            "- [YÊU CẦU HÀNH ĐỘNG]: Viết một đoạn văn ngắn gọn, rõ ràng, yêu cầu kiểm tra đối tượng nghi vấn ngay lập tức. Không dùng ngôn ngữ máy móc lặp lại."
         )
 
         user_content = (
-            f"DỮ LIỆU GỐC (CẤM IN LẠI):\n- Trạng thái: {status_label}\n- Chi tiết: {context_data}\n\n"
-            f"HÃY XUẤT BÁO CÁO THEO CẤU TRÚC CHÍNH XÁC NHƯ SAU:\n\n"
+            f"Thông tin truy xuất:\n- Trạng thái: {status_label}\n- Chi tiết: {context_data}\n\n"
+            f"HÃY XUẤT BÁO CÁO THEO CẤU TRÚC CHÍNH XÁC NHƯ SAU (BẰNG TIẾNG VIỆT):\n\n"
             f"DỮ LIỆU ĐƯỢC TRUY XUẤT VÀO NGÀY {formatted_date}, BẮT ĐẦU TỪ {start_t} TỚI {end_t}.\n\n"
             f"[TRẠNG THÁI AN NINH]: {status_label}\n\n"
             f"[THÔNG TIN CHI TIẾT]\n"
-            f"(Liệt kê danh sách tại đây)\n\n"
+            f"(Liệt kê danh sách tại đây, đảm bảo dịch Sitting/Lying sang tiếng Việt)\n\n"
             f"[YÊU CẦU HÀNH ĐỘNG]\n"
-            f"(Viết yêu cầu tại đây)"
+            f"(Viết yêu cầu tại đây - Ngắn gọn, đanh thép, không lặp từ)"
         )
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_content}]
         return self._call_ai(messages, stream=stream)
     
     def ask(self, user_question, stream=False):
-        def error_generator(msg):
-            yield msg
+            def error_generator(msg):
+                yield msg
 
-        q_lower = user_question.lower()
-        greetings = ["chào", "hi", "hello", "xin chào", "hey"]
-        out_of_scope_topics = ["thời tiết", "mưa", "nắng", "nhiệt độ", "ăn cơm", "bạn là ai"]
-        
-        if any(word in q_lower for word in greetings) and len(user_question.split()) < 5:
-            res = ("Xin chào! Tôi là trợ lý AI giám sát an ninh thang máy.\n"
-                   "Tôi đã sẵn sàng hỗ trợ. Bạn cần tôi trích xuất dữ liệu camera hay kiểm tra sự cố vào mốc thời gian nào?")
-            return error_generator(res) if stream else res
+            q_lower = user_question.lower()
+            greetings = ["chào", "hi", "hello", "xin chào", "hey"]
+            out_of_scope_topics = ["thời tiết", "mưa", "nắng", "nhiệt độ", "ăn cơm", "bạn là ai"]
             
-        if any(topic in q_lower for topic in out_of_scope_topics):
-            res = ("Tôi là trợ lý AI giám sát camera thang máy. Hiện tại tôi không có dữ liệu về các vấn đề ngoài lề.\n"
-                   "Vui lòng đặt câu hỏi liên quan đến tình hình an ninh hoặc trích xuất dữ liệu camera.")
-            return error_generator(res) if stream else res
-
-        query_dict = self._generate_query(user_question)
-
-        if not isinstance(query_dict, dict):
-            query_dict = {"error": "out_of_scope"}
-
-        if query_dict.get("error") == "out_of_scope" or "message" in query_dict or "query" in query_dict:
-            res = ("Tôi là trợ lý AI giám sát camera thang máy. Hiện tại tôi không có dữ liệu về các vấn đề ngoài lề.\n"
-                   "Vui lòng đặt câu hỏi liên quan đến an ninh thang máy.")
-            return error_generator(res) if stream else res
-        
-        if "timestamp" not in query_dict:
-            res = "Tôi không xác định được mốc thời gian. Vui lòng nói rõ ngày/giờ cần kiểm tra."
-            return error_generator(res) if stream else res
-        
-        try:
-            # Tối ưu: Chỉ fetch các trường cần thiết từ MongoDB
-            cursor = self.collection.find(
-                query_dict, 
-                {"timestamp": 1, "people": 1}
-            ).sort("timestamp", 1)
-            
-            data_found = list(cursor)
-            
-            if not data_found:
-                ts_query = query_dict.get('timestamp', {})
-                gte_str = ts_query.get('$gte', '')
-                lt_str = ts_query.get('$lt', '')
+            if any(word in q_lower for word in greetings) and len(user_question.split()) < 5:
+                res = "Xin chào! Tôi là trợ lý AI giám sát an ninh thang máy. Tôi đã sẵn sàng hỗ trợ."
+                return error_generator(res) if stream else res
                 
-                # Tách ngày và giờ
-                try:
-                    date_part = gte_str.split('T')[0]
-                    display_date = datetime.strptime(date_part, "%Y-%m-%d").strftime("%d-%m-%Y")
-                    
-                    time_start = gte_str.split('T')[1][:5] if 'T' in gte_str else "00:00"
-                    time_end = lt_str.split('T')[1][:5] if 'T' in lt_str else "23:59"
-                    
-                    if time_start == "00:00" and time_end == "23:59":
-                        res = f"Hệ thống hoàn toàn không có dữ liệu camera trong ngày {display_date}."
-                    else:
-                        res = f"Hệ thống không có dữ liệu camera trong khung giờ từ {time_start} đến {time_end} trong ngày {display_date}."
-                except:
-                    res = "Hệ thống không có dữ liệu camera trong khoảng thời gian này."
-                
-                return error_generator(res) if stream else res 
+            if any(topic in q_lower for topic in out_of_scope_topics):
+                res = "Tôi là trợ lý AI giám sát camera thang máy. Vui lòng đặt câu hỏi liên quan đến an ninh."
+                return error_generator(res) if stream else res
+
+            query_dict = self._generate_query(user_question)
+
+            if query_dict.get("error") == "out_of_scope":
+                res = "Vui lòng đặt câu hỏi liên quan đến an ninh hoặc trích xuất dữ liệu camera."
+                return error_generator(res) if stream else res
             
-            first_ts_str = data_found[0]['timestamp'] 
-            record_date = first_ts_str.split('T')[0]
-            warns_info = {} 
+            if "start_time" not in query_dict:
+                res = "Tôi không xác định được mốc thời gian. Vui lòng nói rõ ngày/giờ cần kiểm tra."
+                return error_generator(res) if stream else res
+            
+            try:
+                cursor = self.collection.find(query_dict, {"start_time": 1, "end_time": 1, "analysis": 1}).sort("start_time", 1)
+                data_found = list(cursor)
+                if not data_found: return error_generator("Không tìm thấy dữ liệu.") if stream else "Không tìm thấy dữ liệu."
+                
+                record_date = data_found[0]['start_time'].split('T')[0]
+                max_end_time = data_found[-1]['end_time'].split('T')[-1]
+                warns_info = {} 
 
-            for d in data_found:
-                full_ts = d['timestamp']
-                ts_short = full_ts.split('T')[-1] 
-                people = d.get("people", [])
-                for p in people:
-                    p_id = p.get("person_id")
-                    behavior = p.get("behavior", "unknown")
-                    level = p.get("level", "warning" if p.get("level") == "warning" else "normal")
-                    
-                    if p_id not in warns_info:
-                        warns_info[p_id] = {
-                            "first_seen": ts_short,
-                            "warning_start": ts_short if level == "warning" else None,
-                            "last_seen": ts_short,
-                            "behavior": behavior,
-                            "is_warning": (level == "warning")
-                        }
+                for doc in data_found:
+                    analysis = doc.get("analysis", {})
+                    for sec_key in sorted(analysis.keys()):
+                        for p in analysis[sec_key]:
+                            p_id = str(p.get("person_id"))
+                            level = p.get("level", "normal")
+                            bh = str(p.get("behavior", "normal")).lower()
+                            vn_bh = "đang ngồi" if "sit" in bh else "đang nằm" if "ly" in bh else "đang đứng"
+
+                            if p_id not in warns_info:
+                                warns_info[p_id] = {
+                                    "first_seen": sec_key,
+                                    "last_seen": sec_key,
+                                    "warning_start": sec_key if level == "warning" else None,
+                                    "warning_end": sec_key if level == "warning" else None,
+                                    "behavior": vn_bh,
+                                    "is_warning_now": (level == "warning"),
+                                    "ever_warned": (level == "warning")
+                                }
+                            else:
+                                warns_info[p_id]["last_seen"] = sec_key
+                                if level == "warning":
+                                    warns_info[p_id]["ever_warned"] = True
+                                    if warns_info[p_id]["warning_start"] is None:
+                                        warns_info[p_id]["warning_start"] = sec_key
+                                    warns_info[p_id]["warning_end"] = sec_key
+                                    warns_info[p_id]["behavior"] = vn_bh
+                                    warns_info[p_id]["is_warning_now"] = True
+                                else:
+                                    warns_info[p_id]["is_warning_now"] = False
+
+                actual_details = []
+                warning_count = 0
+                for p_id in sorted(warns_info.keys(), key=lambda x: int(x) if x.isdigit() else x):
+                    info = warns_info[p_id]
+                    if info['ever_warned']:
+                        warning_count += 1
+                        # Nếu lúc cuối cùng (max_end_time) trạng thái đã là bình thường (is_warning_now = False)
+                        # thì thời gian kết thúc hành vi là warning_end, không phải last_seen
+                        if not info['is_warning_now'] or info['warning_end'] != max_end_time:
+                            time_desc = f"bắt đầu lúc {info['warning_start']} và đã kết thúc lúc {info['warning_end']}"
+                        else:
+                            time_desc = f"bắt đầu lúc {info['warning_start']} và vẫn đang tiếp diễn"
+                        
+                        actual_details.append(f"- Nhân viên {p_id}: Phát hiện {info['behavior']} bất thường, {time_desc} - NGUY HIỂM")
                     else:
-                        warns_info[p_id]["last_seen"] = ts_short
-                        if level == "warning":
-                            warns_info[p_id]["is_warning"] = True
-                            if warns_info[p_id]["warning_start"] is None:
-                                warns_info[p_id]["warning_start"] = ts_short
+                        actual_details.append(f"- Nhân viên {p_id}: Hoạt động bình thường từ {info['first_seen']} đến {info['last_seen']}.")
 
-            actual_details = []
-            for p_id in sorted(warns_info.keys()):
-                info = warns_info[p_id]
-                display_id = str(p_id)
-                if info['warning_start'] == info['first_seen'] or info['warning_start'] is None:
-                    detail = f"Nhân viên {display_id}: Ghi nhận từ {info['first_seen']} đến {info['last_seen']}."
-                else:
-                    detail = f"Nhân viên {display_id}: Xuất hiện từ {info['first_seen']}, xác định bất thường từ {info['warning_start']} đến {info['last_seen']}."
-                actual_details.append(detail)
-
-            summary = {
-                "date": record_date,
-                "time_range": {"start": first_ts_str.split('T')[-1], "end": data_found[-1]['timestamp'].split('T')[-1]},
-                "details": actual_details,
-                "is_emergency": any(item['is_warning'] for item in warns_info.values())
-            }
-
-            print(f"[Debug] Dữ liệu gửi cho AI phản hồi: {summary}")
-            return self._humanize_response(user_question, summary, stream=stream)
-
-        except Exception as e:
-            print(f"[Error] Lỗi: {e}")
-            res = "Đã xảy ra lỗi trong quá trình xử lý dữ liệu."
-            return error_generator(res) if stream else res
+                summary = {
+                    "date": record_date,
+                    "time_range": {"start": data_found[0]['start_time'].split('T')[-1], "end": max_end_time},
+                    "total_people": len(warns_info),
+                    "total_warnings": warning_count,
+                    "details": actual_details,
+                    "is_emergency": warning_count > 0
+                }
+                return self._humanize_response(user_question, summary, stream=stream)
+            except Exception as e:
+                return error_generator(f"Lỗi: {e}") if stream else f"Lỗi: {e}"

@@ -1,129 +1,277 @@
-/* web/src/Component/LoginForm/LoginForm.scss */
-
-// --- KHUNG CHA: BAO QUÁT TOÀN BỘ TRANG ---
-.fb-app-wrapper {
+.login-page-wrapper {
+  // Đổi sang màu xám dịu đồng bộ với nền ứng dụng của Tài
+  background-color: rgba(180, 180, 180, 1); 
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: rgba(240, 242, 245, 1); // Màu nền xám nhạt
 
-  .fb-body {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+  .login-body-content {
+    flex: 1;
     display: flex;
-    justify-content: center; // Căn giữa form đăng nhập
-    gap: 20px;
-
-    .login-form-section {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-    }
-  }
-}
-
-// --- KHUNG CON: CARD ĐĂNG NHẬP (LoginCard) ---
-.login-form-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-
-  .login-card {
-    width: 100%;
-    max-width: 400px;
-    padding: 20px;
-    text-align: center;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 1); 
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
-
-    h2 {
-      margin-bottom: 20px;
-      font-size: 24px;
-      color: rgba(24, 119, 242, 1); // Màu xanh chủ đạo
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      font-size: 16px;
-      border-radius: 6px;
-      box-sizing: border-box; 
-      border: 1px solid rgba(221, 223, 226, 1); 
-
-      &:focus {
-        outline: none;
-        border-color: rgba(24, 119, 242, 1);
-        box-shadow: 0 0 0 2px rgba(231, 243, 255, 1);
-      }
-    }
-
-    .password-group {
-      position: relative; 
-      width: 100%;
-      display: flex;
-      align-items: center;
-
-      input { padding-right: 45px; }
-
-      .eye-icon {
-        position: absolute;
-        right: 12px;
-        font-size: 19px; 
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        color: rgba(101, 103, 107, 1); 
-        transition: color 0.2s;
-
-        &:hover { color: rgba(24, 119, 242, 1); }
-      }
-    }
-
-    .login-btn {
-      width: 100%;
-      padding: 12px;
-      margin-top: 8px; 
-      font-size: 18px;
-      font-weight: bold;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      color: rgba(255, 255, 255, 1); 
-      background-color: rgba(24, 119, 242, 1); 
-      transition: background 0.2s;
-
-      &:hover { background-color: rgba(22, 111, 229, 1); }
-    }
-
-    .divider {
-      margin: 20px 0;
-      border-bottom: 1px solid rgba(221, 223, 226, 1); 
-    }
-
-    .create-btn {
-      padding: 10px 20px;
-      font-size: 17px;
-      font-weight: bold;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      color: rgba(255, 255, 255, 1); 
-      background-color: rgba(66, 183, 42, 1); // Màu xanh lá tạo tài khoản
-      transition: background 0.2s;
-
-      &:hover { background-color: rgba(54, 164, 32, 1); }
-    }
-  }
-}
-
-// --- RESPONSIVE ---
-@media (max-width: 900px) {
-  .fb-app-wrapper .fb-body {
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
+    padding: 20px;
+
+    .login-card-container {
+      width: 100%;
+      max-width: 420px; // Thu nhỏ lại một chút cho cân đối
+      animation: fadeInUp 0.6s ease-out;
+
+      .login-card {
+        // Card dùng màu xám sáng hơn nền một chút để nổi bật (hoặc giữ trắng tùy ý Tài)
+        background: rgba(210, 210, 210, 1); 
+        padding: 40px;
+        border-radius: 20px; // Bo góc đồng bộ với Admin Panel
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+
+        .login-header {
+          text-align: center;
+          margin-bottom: 35px;
+
+          h2 {
+            // Màu xanh dương thương hiệu của Tài
+            color: rgba(0, 80, 255, 1); 
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+          }
+
+          p {
+            // Màu chữ phụ xám đậm
+            color: rgba(80, 80, 80, 1); 
+            font-size: 0.9rem;
+          }
+        }
+
+        form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+
+          .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            label {
+              font-size: 0.85rem;
+              font-weight: 700;
+              color: rgba(60, 60, 60, 1);
+            }
+
+            input {
+              padding: 14px 16px;
+              border-radius: 10px;
+              // Border xám đậm hơn nền card một chút
+              border: 1px solid rgba(160, 160, 160, 1); 
+              background-color: rgba(245, 245, 245, 1);
+              font-size: 1rem;
+              outline: none;
+              transition: 0.3s;
+
+              &:focus {
+                // Focus chuyển sang xanh dương đồng bộ
+                border-color: rgba(0, 80, 255, 1);
+                background-color: white;
+                box-shadow: 0 0 8px rgba(0, 80, 255, 0.15);
+              }
+            }
+
+            .password-wrapper {
+              position: relative;
+              display: flex;
+              align-items: center;
+
+              input {
+                width: 100%;
+                padding-right: 45px;
+              }
+
+              .eye-icon {
+                position: absolute;
+                right: 15px;
+                color: rgba(100, 100, 100, 1);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                &:hover { color: rgba(0, 80, 255, 1); }
+              }
+            }
+          }
+
+          .login-btn {
+            margin-top: 10px;
+            background-color: rgba(0, 80, 255, 1);
+            color: white; // Chữ trắng nổi bật trên nền xanh
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+
+            &:hover {
+              background-color: rgba(0, 60, 200, 1);
+              transform: translateY(-2px);
+              box-shadow: 0 10px 20px rgba(0, 80, 255, 0.25);
+            }
+          }
+        }
+
+        .login-footer {
+          margin-top: 30px;
+          text-align: center;
+          font-size: 0.8rem;
+          // Màu chữ footer xám dịu
+          color: rgba(100, 100, 100, 1); 
+        }
+      }
+    }
   }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}.login-page-wrapper {
+  // Đổi sang màu xám dịu đồng bộ với nền ứng dụng của Tài
+  background-color: rgba(180, 180, 180, 1); 
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  .login-body-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+
+    .login-card-container {
+      width: 100%;
+      max-width: 420px; // Thu nhỏ lại một chút cho cân đối
+      animation: fadeInUp 0.6s ease-out;
+
+      .login-card {
+        // Card dùng màu xám sáng hơn nền một chút để nổi bật (hoặc giữ trắng tùy ý Tài)
+        background: rgba(210, 210, 210, 1); 
+        padding: 40px;
+        border-radius: 20px; // Bo góc đồng bộ với Admin Panel
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+
+        .login-header {
+          text-align: center;
+          margin-bottom: 35px;
+
+          h2 {
+            // Màu xanh dương thương hiệu của Tài
+            color: rgba(0, 80, 255, 1); 
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+          }
+
+          p {
+            // Màu chữ phụ xám đậm
+            color: rgba(80, 80, 80, 1); 
+            font-size: 0.9rem;
+          }
+        }
+
+        form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+
+          .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            label {
+              font-size: 0.85rem;
+              font-weight: 700;
+              color: rgba(60, 60, 60, 1);
+            }
+
+            input {
+              padding: 14px 16px;
+              border-radius: 10px;
+              // Border xám đậm hơn nền card một chút
+              border: 1px solid rgba(160, 160, 160, 1); 
+              background-color: rgba(245, 245, 245, 1);
+              font-size: 1rem;
+              outline: none;
+              transition: 0.3s;
+
+              &:focus {
+                // Focus chuyển sang xanh dương đồng bộ
+                border-color: rgba(0, 80, 255, 1);
+                background-color: white;
+                box-shadow: 0 0 8px rgba(0, 80, 255, 0.15);
+              }
+            }
+
+            .password-wrapper {
+              position: relative;
+              display: flex;
+              align-items: center;
+
+              input {
+                width: 100%;
+                padding-right: 45px;
+              }
+
+              .eye-icon {
+                position: absolute;
+                right: 15px;
+                color: rgba(100, 100, 100, 1);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                &:hover { color: rgba(0, 80, 255, 1); }
+              }
+            }
+          }
+
+          .login-btn {
+            margin-top: 10px;
+            background-color: rgba(0, 80, 255, 1);
+            color: white; // Chữ trắng nổi bật trên nền xanh
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+
+            &:hover {
+              background-color: rgba(0, 60, 200, 1);
+              transform: translateY(-2px);
+              box-shadow: 0 10px 20px rgba(0, 80, 255, 0.25);
+            }
+          }
+        }
+
+        .login-footer {
+          margin-top: 30px;
+          text-align: center;
+          font-size: 0.8rem;
+          // Màu chữ footer xám dịu
+          color: rgba(100, 100, 100, 1); 
+        }
+      }
+    }
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }

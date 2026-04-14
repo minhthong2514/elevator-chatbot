@@ -1,0 +1,15 @@
+  .admin-camera-display-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+
+    .admin-camera-view {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+
+      
+    }
+  }

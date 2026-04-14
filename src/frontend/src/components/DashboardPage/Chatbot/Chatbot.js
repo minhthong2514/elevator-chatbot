@@ -1,3 +1,4 @@
+// file này là của chat bot
 import React, { useState, useRef, useEffect } from 'react';
 import './Chatbot.scss';
 
@@ -77,7 +78,7 @@ function Chatbot() {
         
         {/* Tiêu đề */}
         <div className="chatbot-header-bg">
-          <h2>ELEVATOR CHATBOT</h2>
+          <h2>CHATBOT</h2>
         </div>
 
         {/* Vùng tin nhắn */}

@@ -1,3 +1,4 @@
+// file này cấu hình phần nút chuyển tab camera và chatbot user
 import React from 'react';
 import { Camera, MessageSquare } from 'lucide-react';
 import './NavButton.scss';

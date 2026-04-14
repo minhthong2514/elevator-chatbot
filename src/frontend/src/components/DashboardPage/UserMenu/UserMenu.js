@@ -1,3 +1,4 @@
+// file này là cấu hình menusetting của user
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, Moon, Sun, Info, LogOut, Eye, EyeOff } from 'lucide-react'; // Thêm icon Eye

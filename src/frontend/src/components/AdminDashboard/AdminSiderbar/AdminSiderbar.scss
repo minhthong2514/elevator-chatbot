@@ -1,0 +1,72 @@
+/* AdminSidebar.scss */
+
+.admin-sidebar {
+  width: 260px;
+  height: 100vh;
+  background-color: rgba(180, 180, 180, 1); // Màu xám dịu chủ đạo
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+
+  .sidebar-header {
+    padding: 30px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    img { width: 40px; height: 40px; border-radius: 50%; }
+    span { 
+      font-weight: 800; 
+      font-size: 18px; 
+      color: rgba(0, 80, 255, 1); // Chữ Admin màu xanh dương
+      letter-spacing: 1px;
+    }
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 10px;
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 20px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: rgba(60, 60, 60, 1);
+      font-weight: 600;
+      transition: all 0.2s ease;
+
+      svg { font-size: 20px; color: rgba(0, 80, 255, 0.7); }
+
+      &:hover {
+        background-color: rgba(0, 80, 255, 0.1);
+        color: rgba(0, 80, 255, 1);
+      }
+
+      &.active {
+        background-color: rgba(0, 80, 255, 1); // Nền xanh dương khi chọn
+        color: rgba(180, 180, 180, 1); // Chữ xám dịu nổi bật trên nền xanh
+        box-shadow: 0 4px 15px rgba(0, 80, 255, 0.3);
+
+        svg { color: rgba(180, 180, 180, 1); }
+      }
+    }
+  }
+
+  .sidebar-footer {
+    padding: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #e74c3c; // Màu đỏ đăng xuất cho dễ thấy
+    cursor: pointer;
+    font-weight: bold;
+    
+    &:hover { background-color: rgba(231, 76, 60, 0.1); }
+  }
+}

@@ -3,75 +3,65 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Header from '../Header/Header.js'; 
 import './LoginForm.scss';
 
-// --- 1. COMPONENT CON: KHUNG ĐĂNG NHẬP/ĐĂNG KÝ ---
-const LoginCard = ({ 
-  isRegistering, setIsRegistering, handleLogin, handleRegister, 
-  username, setUsername, password, setPassword 
-}) => {
+// --- 1. COMPONENT CON: KHUNG ĐĂNG NHẬP ---
+const LoginCard = ({ handleLogin, username, setUsername, password, setPassword }) => {
   const [showPassword, setShowPassword] = useState(false);
-
-  // Xử lý gửi form chung
-  const onSubmit = (e) => {
-    isRegistering ? handleRegister(e) : handleLogin(e);
-  };
-
-  // Reset dữ liệu khi chuyển đổi chế độ
-  const toggleMode = () => {
-    setIsRegistering(!isRegistering);
-    setUsername('');
-    setPassword('');
-  };
 
   return (
     <div className="login-card">
-      <h2>ELEVATOR MONITORING</h2>
-      <form onSubmit={onSubmit}>
-        <input 
-          type="text" 
-          placeholder="Username" 
-          value={username} 
-          onChange={(e) => setUsername(e.target.value)}
-          required 
-        />
-        
-        <div className="password-group">
+      <div className="login-header">
+        <h2>ELEVATOR MONITORING</h2>
+      </div>
+
+      <form onSubmit={handleLogin}>
+        <div className="input-group">
+          <label>Tên đăng nhập</label>
           <input 
-            type={showPassword ? "text" : "password"} 
-            placeholder="Password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="text" 
+            placeholder="Nhập username..." 
+            value={username} 
+            onChange={(e) => setUsername(e.target.value)}
             required 
           />
-          <span className="eye-icon" onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
+        </div>
+        
+        <div className="input-group">
+          <label>Mật khẩu</label>
+          <div className="password-wrapper">
+            <input 
+              type={showPassword ? "text" : "password"} 
+              placeholder="Nhập mật khẩu..." 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required 
+            />
+            <span className="eye-icon" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </span>
+          </div>
         </div>
 
         <button type="submit" className="login-btn">
-          {isRegistering ? 'Sign in' : 'Login'}
+          ĐĂNG NHẬP HỆ THỐNG
         </button>
       </form>
 
-      <div className="divider"></div>
-
-      <button type="button" className="create-btn" onClick={toggleMode}>
-        {isRegistering ? 'Already have an account?' : 'Create an Account'}
-      </button>
+      {/* Đã xóa phần Divider và nút Create Account */}
+      <div className="login-footer">
+        <span>© 2026 Elevator Monitor System</span>
+      </div>
     </div>
   );
 };
 
-// --- 2. COMPONENT CHA: BỐ CỤC TRANG ---
+// --- 2. COMPONENT CHA ---
 const LoginForm = (props) => {
   return (
-    <div className="fb-app-wrapper">
+    <div className="login-page-wrapper">
       <Header />
-      
-      <div className="fb-body">
-        <div className="login-form-section">
-          <div className="login-form-container">
-            <LoginCard {...props} />
-          </div>
+      <div className="login-body-content">
+        <div className="login-card-container">
+          <LoginCard {...props} />
         </div>
       </div>
     </div>

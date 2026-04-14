@@ -3,16 +3,21 @@
 .fb-header {
   height: 60px;
   padding: 0 20px;
-  display: flex; // Đã sửa lỗi "inline flex" thành "flex" chuẩn
+  display: flex; 
   align-items: center;
-  background-color: rgba(255, 255, 255, 1); 
+  // Đổi nền trắng sang màu xám dịu đồng bộ
+  background-color: rgba(180, 180, 180, 1); 
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   .fb-logo {
     margin: 0;
     font-size: 40px;
-    font-weight: 800; // Tăng độ dày cho logo nổi bật
-    color: rgba(24, 119, 242, 1); // Màu xanh đặc trưng
-    letter-spacing: -1px; // Thu hẹp khoảng cách chữ cho hiện đại
+    font-weight: 800; 
+    // Đổi màu xanh cũ sang màu xanh dương đồng bộ (0, 80, 255, 1)
+    color: rgba(0, 80, 255, 1); 
+    letter-spacing: -1px; 
+    
+    // Thêm hiệu ứng đổ bóng nhẹ để logo nổi bật hơn trên nền xám
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 }

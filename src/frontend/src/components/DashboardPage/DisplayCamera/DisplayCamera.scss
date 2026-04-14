@@ -1,20 +1,21 @@
 /* web/src/Component/DisplayCamera/DisplayCamera.scss */
 
 .camera-container {
- display: flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  margin-top: 85px; // Giữ nguyên mức này
+  // Chỉnh margin-top thấp xuống theo ý Tài ở câu trước (ví dụ 120px)
+  margin-top: 120px; 
   padding-bottom: 30px;
 
   .video-box {
     position: relative;
-    /* THU NHỎ KÍCH THƯỚC: 75% màn hình */
     width: 90%;           
     max-width: 1200px;    
     aspect-ratio: 16 / 9; 
     box-sizing: border-box;
+    // Đã chuyển sang rgba(0, 0, 0, 1)
     background-color: rgba(0, 0, 0, 1);
     border: 1px solid rgba(26, 26, 26, 1);
     border-radius: 20px;
@@ -30,24 +31,24 @@
     .camera-stream {
       width: 100%;
       height: 100%;
-      object-fit: cover; // Đổi sang cover để không bị méo hình khi thu nhỏ
+      object-fit: cover; 
       display: block;
     }
 
-    /* CSS CHO LỚP PHỦ MÀN ĐEN */
+    /* CSS CHO LỚP PHỦ MÀN ĐEN (Privacy Overlay) */
     .camera-privacy-overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: #000;
+      // Đã chuyển màu nền sang rgba
+      background-color: rgba(0, 0, 0, 1);
       z-index: 10;
       display: flex;
       justify-content: center;
       align-items: center;
       
-      /* Hiệu ứng mờ dần */
       opacity: 0;
       visibility: hidden;
       transition: all 0.4s ease-in-out;
@@ -59,12 +60,12 @@
 
       .overlay-content {
         text-align: center;
-        color: #fff;
+        color: rgba(180, 180, 180, 1); 
 
         .privacy-icon {
           margin-bottom: 15px;
-          color: rgba(52, 152, 219, 1);
-          filter: drop-shadow(0 0 10px rgba(52, 152, 219, 0.5));
+          color: rgba(0, 80, 255, 1);
+          filter: drop-shadow(0 0 10px rgba(0, 80, 255, 0.5));
         }
 
         p {
@@ -72,11 +73,12 @@
           font-weight: bold;
           letter-spacing: 1px;
           margin-bottom: 5px;
+          color: rgba(180, 180, 180, 1); 
         }
 
         span {
           font-size: 14px;
-          opacity: 0.6;
+          color: rgba(180, 180, 180, 0.6); // Chỉnh opacity qua rgba luôn
         }
       }
     }
@@ -84,8 +86,8 @@
 
   .status-text {
     margin-top: 25px;
-    font-size: 22px; // Giảm nhẹ size cho cân đối với khung camera mới
-    color: var(--text-menu);
+    font-size: 22px; 
+    color: rgba(51, 51, 51, 1); // Thay var(--text-menu) nếu Tài muốn cố định
     display: flex;
     align-items: center;
     gap: 12px;
@@ -96,21 +98,21 @@
       border-radius: 50%;
       
       &.live {
-        background-color: #42b72a;
+        background-color: rgba(66, 183, 42, 1); // Màu xanh lá gốc của Tài
         animation: pulse-green 1.8s infinite; 
       }
       &.error {
-        background-color: #e74c3c;
+        background-color: rgba(231, 76, 60, 1); // Màu đỏ gốc của Tài
         animation: pulse-red 1.8s infinite;
       }
     }
 
-    .live { color: #42b72a; font-weight: 800; }
-    .error { color: #e74c3c; font-weight: 800; }
+    .live { color: rgb(0, 150, 26); font-weight: 800; }
+    .error { color: rgb(255, 0, 0); font-weight: 800; }
   }
 }
 
-// Giữ các hiệu ứng keyframes pulse-green và pulse-red của Tài...
+/* Hiệu ứng xung nhịp dùng màu rgba */
 @keyframes pulse-green {
   0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(66, 183, 42, 0.6); }
   70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(66, 183, 42, 0); }
